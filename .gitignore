@@ -1,3 +1,19 @@
+###########################################################################
+# Global git ignore file. For ignore on subdirs, use gitignore in subdir ##
+###########################################################################
+
+# Pdf's take a lot of unnessicary space. Compile them from the .typ file.
+*.pdf
+
+# The execution binary for creating UML with plantuml
+*.jar
+
+
+
+###########################################################################
+# Below is the python template for a gitnore, provided by github. #########
+###########################################################################
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
