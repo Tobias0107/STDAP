@@ -1,0 +1,41 @@
+Deze file is nog niet compleet. Ik was gewoon een beetje algemeen aan het
+brainstormen. Kan zijn dat we het volledig anders doen.
+
+@startuml class UML
+
+''''''''''''''''''''''''''''''''''''''
+'''''' Defining all classes ''''''''''
+''''''''''''''''''''''''''''''''''''''
+class data {
+    string csv_KWB
+    string kpkg_neighborhood_map
+    network
+    void load_files()
+    void pre_process()
+    void run_simulation(f)
+    Lst get_results()
+}
+
+class network {
+    Lst nodes
+    Lst edges
+}
+
+class neighborhood {
+    int population
+    int size
+    int males
+    int females
+    int Ethnicity
+    float get_population_density()
+    float get_ethnicity_proportions()
+}
+
+
+''''''''''''''''''''''''''''''''''''''
+'''''' Defining relations ''''''''''''
+''''''''''''''''''''''''''''''''''''''
+data::network --> network
+network::nodes --> neighborhood
+
+@enduml
