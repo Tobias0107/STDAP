@@ -8,6 +8,10 @@
 # The execution binary for creating UML with plantuml
 *.jar
 
+# The data input files (too large)
+*.gpkg
+*.csv
+*.xlsx
 
 
 ###########################################################################

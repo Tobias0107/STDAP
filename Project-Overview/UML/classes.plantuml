@@ -6,9 +6,9 @@ brainstormen. Kan zijn dat we het volledig anders doen.
 ''''''''''''''''''''''''''''''''''''''
 '''''' Defining all classes ''''''''''
 ''''''''''''''''''''''''''''''''''''''
+' Main class
 class data {
-    string csv_KWB
-    string kpkg_neighborhood_map
+    kwb
     network
     void load_files()
     void pre_process()
@@ -16,6 +16,17 @@ class data {
     Lst get_results()
 }
 
+' Wrapper class for the KWB. Uses duckdb extract data from csv.
+' Should merge the data with the geo data. Can also be done in duckdb.
+class CBS {
+    duckdb
+    __init(path_csv, path_geo)
+    get_info1()
+    get_info2()
+    get_info...()
+}
+
+' Wrapper for interacting with the network
 class network {
     Lst nodes
     Lst edges
@@ -31,11 +42,13 @@ class neighborhood {
     float get_ethnicity_proportions()
 }
 
-
 ''''''''''''''''''''''''''''''''''''''
 '''''' Defining relations ''''''''''''
 ''''''''''''''''''''''''''''''''''''''
 data::network --> network
+data::kwb --> CBS
+
 network::nodes --> neighborhood
+
 
 @enduml
