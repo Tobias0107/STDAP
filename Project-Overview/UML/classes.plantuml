@@ -8,8 +8,8 @@ brainstormen. Kan zijn dat we het volledig anders doen.
 ''''''''''''''''''''''''''''''''''''''
 ' Main class
 class data {
-    kwb
-    network
+    CBS kwb
+    osmnx network
     void load_files()
     void pre_process()
     void run_simulation(f)
@@ -21,7 +21,7 @@ class data {
 class CBS {
     duckdb
     __init(path_csv, path_geo)
-    get_info1()
+    get_DataFrame()
     get_info2()
     get_info...()
 }
