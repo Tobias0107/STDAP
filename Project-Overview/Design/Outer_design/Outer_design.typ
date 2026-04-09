@@ -71,6 +71,5 @@ This has two functions.
 1. It will contribute to the documentation. (Documentation will contain screenshots/references to these examples)
 2. It provides better communication to each other.
 
-== UML main class
-
-
+= UML
+#image("UML.svg")

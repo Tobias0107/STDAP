@@ -1,0 +1,62 @@
+This file describes the uml of the entire python package.
+
+@startuml class UML
+
+''''''''''''''''''''''''''''''''''''''
+'''''' Defining all classes ''''''''''
+''''''''''''''''''''''''''''''''''''''
+' Main class (choose city also does the preprocessing / data_extraction)
+class Main_class {
+    CBS kwb
+    Network network
+    
+    void __init(csv, geopackage)
+    Lst get_cities()
+    Bool choose_city(city)
+    
+    Dict Simulate_transit_dist_on_trans(fraction, dem_grps, vis_opt)
+    Lst[Dict] Simulate_transit_dist_on_trans_range(range, dem_grps, vis_opt, prog_opt)
+}
+
+' Wrapper class for the CBS files (csv file and geopackage)
+class CBS {
+    __init(path_csv, path_geo)
+    Duckdb database
+    Lst get_cities()
+    pd.DataFrame get_DataFrame(dem_grps)
+}
+
+' Wrapper for interacting with the network
+class Network {
+    OSMnx graph
+    Dict neighborhood_info
+    void __init()
+    Bool remove_edges(fraction)
+    Float shortest_dist(from, to)
+}
+
+class Neighborhood {
+    int population
+    int size
+    int males
+    int females
+    int Ethnicity
+    void __init()
+    float get_population_density()
+    float get_ethnicity_proportions()
+}
+
+' Gui is separate from the Main_class and uses this main class to run the Gui.
+protocol Gui
+
+''''''''''''''''''''''''''''''''''''''
+'''''' Defining relations ''''''''''''
+''''''''''''''''''''''''''''''''''''''
+Main_class::kwb --> CBS : is
+Main_class::network --> Network : is
+
+Network::neighborhood_info --> Neighborhood : contains
+
+Gui ..|> Main_class : uses
+
+@enduml
