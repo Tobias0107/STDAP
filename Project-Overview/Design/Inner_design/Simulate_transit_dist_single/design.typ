@@ -22,5 +22,7 @@
 - simulation
  + Remove edges based on street length divided by population size or amenity size. Keep removing edges until the correct fraction is met.
  + For every transit station, check if it is located on an edge that is now pedestrian area. If so, relocate it to the nearest node allowing cars (or road if possible)
- + For all 5 points, calculate the distance to the nearest transit station.
+ + For every neighborhood:
+  + For all 5 points, calculate the distance to the nearest transit station.
+  + For every demographic group, add the average distance divided by the number of that demographic group
 
