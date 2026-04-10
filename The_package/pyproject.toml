@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "package-name"
+version = "0.1.0"
+description = "Short description of your package"
+readme = "README.md"
+license = { file = "LICENCE" }
+authors = [
+    { name = "Your Name", email = "your@email.com" }
+]
+requires-python = ">=3.10"
+
+dependencies = [
+    # Add runtime dependencies here, e.g.:
+    # "numpy>=1.25",
+    # "pandas>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov",
+    "black",
+    "ruff",
+    "mypy"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# Include non-code files if needed
+[tool.setuptools.package-data]
+"package_name" = ["py.typed"]
+
+# Pytest configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra -q"
+
+# Optional: coverage config
+[tool.coverage.run]
+source = ["package_name"]
+
+[tool.coverage.report]
+show_missing = true
+
+# Optional: linting (ruff)
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+# Optional: formatting (black)
+[tool.black]
+line-length = 100
+target-version = ["py310"]

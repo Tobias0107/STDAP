@@ -1,19 +1,26 @@
 """
     This file describes the main class structure. (See UML outer_design).
     The other classes are defined in _classes.py
+
+    This class is mostly used as a header file, as well as for defining what
+    functions should be public. All functionality should therefore be moved
+    to different modules in the package (utils or core) 
 """
 
+
 # Import packages
-import networkx as nx
-import osmnx as ox
+# none yet
 
 # Import classes and exceptions
 from _classes import Neighborhood, CBS, Network
-from Package_name.exceptions import Initializing_error
+from package_name.exceptions import Initializing_error
 
 
-# Import Simulations
-import Package_name.core._simulation_transit_distance as Sim_trans_dist
+# Import Simulations from core
+import package_name.core._simulation_transit_distance as Sim_trans_dist
+
+# Import helper functions from utils 
+# none yet
 
 
 class simulator:
@@ -23,13 +30,19 @@ class simulator:
     """    
     
     def __init__(self, csv: str, geopackage:str) -> None:
+        """ Initializes new instance of the simulator for the given datasets """
         self.network = None
         self.kwb = CBS(csv, geopackage)
 
     def get_cities(self):
-        pass
+        """ Returns a list of cities available in the given datasets """
+        return self.kwb.get_cities()
 
     def choose_city(self, city: str):
+        """
+            Tells the simulator what city to research.
+            Should be called at least one before running a simulation.    
+        """
         self.network = Network(city)
 
     def Simulate_transit_dist_on_trans(self, fraction: float,
@@ -45,10 +58,11 @@ class simulator:
                 The visual options (split into more parameters later)
             
             ### Simulation:
-            See requirements
+            <Here a description of the exact simulation>
         """
         if (self.network == None):
             raise Initializing_error("City not yet initialized. Before running" \
             "this simulation, call 'choose_city' first. For details, see manual.")
         
-        return Sim_trans_dist.run_simulation(self.network, self.kwb, fraction, demographic_groups, visual_options)
+        return Sim_trans_dist.run_simulation(self.network, self.kwb, fraction,
+                                             demographic_groups, visual_options)
