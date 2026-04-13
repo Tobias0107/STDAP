@@ -52,7 +52,7 @@ class Database:
         res = self.conn.sql(query).fetchnumpy()
         return res["gm_naam"].tolist()
     
-    def pre_process(self):
+    def pre_process(self, city:str):
         """
             Starts the pre-processing progress.
             Should be called before running the simulations and after choosing the city (performance)
@@ -68,6 +68,7 @@ class Database:
             This operation creates the Graph table (see outer_design).
         """
         pass
+
 
 class Network:
     def __init__(self, city: str) -> None:

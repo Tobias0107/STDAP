@@ -8,8 +8,25 @@
   The parameters should include the demographic groups to target (performance wise).\
   The parameters should include any visualizing mechanics, like saving an image of the transformed map (before and after in a single image), and make the increase in distance per neighborhood visual with colors. Also maybe a bar diagram showing the results. The results should also be returned by the method in the form of a dictionary. \
 */
+=== New design
+- Pre simulation
+ + Data collection
+  - Initialize Database
+  - Initialize Network
+   - Include pedestrian network
+ + Choose city
+ + Data_pre_processing
+  - Per node, determine the zone
+  - Per neighborhood, determine
+   - the total street length, and car-accessible length
+   - Population density
+   - Amenity density (category specific)
+   - Per demographic group, the group size divided by the total people in the neighborhood.
+- Simulation()
+ + 
 
-=== General steps
+
+=== Old design
 - Pre simulation. 
  + For every neighborhood, create an instance of the network class. 
   - Store the class in a dictionary with the neighborhood names as key, and classes as value.
