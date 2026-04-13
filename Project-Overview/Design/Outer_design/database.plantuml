@@ -1,0 +1,60 @@
+@startuml class UML
+
+''''''''''''''''''''''''''''''''''''''
+'''''' Defining all classes ''''''''''
+''''''''''''''''''''''''''''''''''''''
+
+' On initialization
+entity CBS {
+    *gwb_code <<primary_key>>
+    *regio <<names>>
+    *recs <<Land | Gemeente | Wijk | Buurt>>
+    *geom <<borders>>
+    demographic_info
+}
+
+' For data-analysis on the nodes of a large OSMnx graph
+entity Graph {
+    *node <<primary_key>>
+    *loc <<POINT>>
+    r_idx <<performance>>
+    zone <<performance>>
+    node_info
+}
+
+' The 5 points representing a neighborhood. Every point is a single column to
+' allow customizable number of points per neighborhood. 
+entity Neighborhood_pts {
+    *gwb_code <<primary_key>>
+    *id <<primary_key>>
+    *pt <<POINT>>
+}
+
+' Cleaned version of CBS after pre-processing.
+' Contains only needed columns with some (partially) processed data.
+' Only rec='Buurt'
+' Population density
+' Amenity density
+' Only essential demographic_info
+entity Neighborhood {
+    *gwb_code <<primary_key>>
+    *regio <<names>>
+    *geom <<borders>>
+    demographic_info
+}
+
+
+''''''''''''''''''''''''''''''''''''''
+'''''' Defining relations ''''''''''''
+''''''''''''''''''''''''''''''''''''''
+
+CBS ||--|| Neighborhood
+CBS::gwb_code |o--o{  Neighborhood_pts::gwb_code
+Neighborhood::gwb_code |o--o{  Neighborhood_pts::gwb_code
+
+CBS::geom ||--o{ Graph::zone
+Neighborhood::geom ||--o{ Graph::zone
+
+
+
+@enduml

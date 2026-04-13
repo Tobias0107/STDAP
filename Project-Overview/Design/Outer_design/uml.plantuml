@@ -7,7 +7,7 @@ This file describes the uml of the entire python package.
 ''''''''''''''''''''''''''''''''''''''
 ' Main class (choose city also does the preprocessing / data_extraction)
 class Main_class {
-    CBS kwb
+    Database data
     Network network
     
     void __init(csv, geopackage)
@@ -18,32 +18,24 @@ class Main_class {
     Lst[Dict] Simulate_transit_dist_on_trans_range(range, dem_grps, vis_opt, prog_opt)
 }
 
-' Wrapper class for the CBS files (csv file and geopackage)
-class CBS {
-    __init(path_csv, path_geo)
-    Duckdb database
+' Wrapper class for the entire database. For database structure, see outer_design.
+' Data consists of the csv, geopackage, network nodes.
+class Database {
+    Duckdb connection
+
+    __init(csv, geopackage)
     Lst get_cities()
-    pd.DataFrame get_DataFrame(dem_grps)
+    load_network(name)
+
 }
 
-' Wrapper for interacting with the network
+' Wrapper for interacting with the network. All information about the nodes is stored
+' in the database.
 class Network {
     OSMnx graph
-    Dict neighborhood_info
     void __init()
-    Bool remove_edges(fraction)
+    Bool remove_edges(Lst)
     Float shortest_dist(from, to)
-}
-
-class Neighborhood {
-    int population
-    int size
-    int males
-    int females
-    int Ethnicity
-    void __init()
-    float get_population_density()
-    float get_ethnicity_proportions()
 }
 
 ' Gui is separate from the Main_class and uses this main class to run the Gui.
@@ -52,10 +44,8 @@ protocol Gui
 ''''''''''''''''''''''''''''''''''''''
 '''''' Defining relations ''''''''''''
 ''''''''''''''''''''''''''''''''''''''
-Main_class::kwb --> CBS : is
+Main_class::data --> Database : is
 Main_class::network --> Network : is
-
-Network::neighborhood_info --> Neighborhood : contains
 
 Gui ..|> Main_class : uses
 

@@ -10,19 +10,30 @@ import pytest
 from package_name.core._classes import Neighborhood, CBS, Network
 
 
+csv = "tests/TestDatasets/test.csv"
+geopackage = "tests/TestDatasets/test.gpkg"
+
+network = Network("Amsterdam")
+cbs = CBS(csv, geopackage)
+
 class TestNeighborhood:
     pass
 
 class TestCBS:
-    csv = "tests/TestDatasets/test.csv"
-    geopackage = "tests/TestDatasets/test.gpkg"
-    
+    def test_init(self):
+        cbs.to_csv("preview_database.csv")
+
     def test_get_cities(self):
-        cbs = CBS(self.csv, self.geopackage)
         cities = cbs.get_cities()
         assert len(cities) == 342
 
+    def test_get_neighborhood_borders(self):
+        borders = cbs.get_neighborhood_borders('Amsterdam')
+        borders.to_csv("test_borders.csv")
+
 
 class TestNetwork:
-    pass
+    def test_load_neighborhoods(self):
+        network.load_neighborhoods(cbs.get_neighborhood_borders("Amsterdam"))
+        assert True
 

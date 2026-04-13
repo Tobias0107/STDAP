@@ -72,4 +72,24 @@ This has two functions.
 2. It provides better communication to each other.
 
 = UML
+The basic structure of the package.
 #image("UML.svg")
+
+= Database
+The basic structure of the database used for most data analysis. This database is part of the Database class.\
+Every entity 'E' represents a table within the database. \
+The attributes with a large black dot before them are required items. \
+
+== CBS
+This table contains the merged form of the csv and geopackage . It contains the core numbers per neighborhood from the CBS including the borders of the neighborhoods. \
+demographic_info consists of multiple columns all containing information about different demographic groups within a neighborhood.
+
+== Graph
+This table contains all nodes within the urban street network, including basic information about the node to be stored. The r_idx can be used for better performance for geometry based filtering of large datasets.
+
+== Neighborhood
+The Neighborhood class is the cleaned up version of CBS. It contains only information about neighborhoods ("Buurten"). Some of the columns are pre-processed to contain more relevant information like the population density.
+
+== Neighborhood_pts
+#image("database.svg")
+

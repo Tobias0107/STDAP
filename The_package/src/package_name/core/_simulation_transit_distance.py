@@ -12,6 +12,13 @@ def run_simulation(network:Network, kwb:CBS, f: float, dem_grps: list[str], vis_
         analyse effect on distance to the transit points. For details please
         see main function, or manual.  
     """
-    pass
+    # Store information about neighborhoods (5 points + demographic data)
+    # key = neighborhood name, value = Neighborhood class
+    neighborhoods: dict[str, Neighborhood] = dict()
+    
+    # TO-DO: add information to neighborhoods 
+
+    # For every node in the network, add an attribute containing the neighborhood.
+    
 
 
