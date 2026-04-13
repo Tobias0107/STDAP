@@ -1,0 +1,10 @@
+# All can be directly called using pip install
+duckdb
+duckdb-extension-spatial
+
+osmnx
+
+geopandas
+
+pyarrow # Used for conversion between geopandas to duckdb
+

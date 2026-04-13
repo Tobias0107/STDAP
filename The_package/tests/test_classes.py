@@ -15,8 +15,9 @@ geopackage = "tests/TestDatasets/test.gpkg"
 
 network = Network("Amsterdam")
 database = Database(csv, geopackage)
+database.to_csv()
 
-class TestCBS:
+class TestDatabase:
     def test_init(self):
         pass
 
@@ -25,6 +26,9 @@ class TestCBS:
 
     def test_get_neighborhood_borders(self):
         pass
+
+    def test_load_network(self):
+        database.load_network(network.graph)
 
 
 class TestNetwork:

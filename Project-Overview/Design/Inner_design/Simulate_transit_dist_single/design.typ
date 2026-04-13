@@ -8,7 +8,7 @@
   The parameters should include the demographic groups to target (performance wise).\
   The parameters should include any visualizing mechanics, like saving an image of the transformed map (before and after in a single image), and make the increase in distance per neighborhood visual with colors. Also maybe a bar diagram showing the results. The results should also be returned by the method in the form of a dictionary. \
 */
-=== New design
+= Design
 - Pre simulation
  + Data collection
   - Initialize Database
@@ -16,30 +16,27 @@
    - Include pedestrian network
  + Choose city
  + Data_pre_processing
-  - Per node, determine the zone
+  - Per node, determine
+   - the zone
+   - population / amenity nearby
+   - Number of transit
   - Per neighborhood, determine
    - the total street length, and car-accessible length
    - Population density
    - Amenity density (category specific)
    - Per demographic group, the group size divided by the total people in the neighborhood.
-- Simulation()
- + 
-
-
-=== Old design
-- Pre simulation. 
- + For every neighborhood, create an instance of the network class. 
-  - Store the class in a dictionary with the neighborhood names as key, and classes as value.
-  - The class should contain the following information:
-   - The relevant values of the demographic groups
-   - The 5 points denoting the neighborhood.
- + For every node in the network, determine the neighborhood, and store as attribute.
- + For every neighborhood, calculate amenity density (amenity by category divided by area)
- + Identify all transit stations in the city, with some buffer.
-- simulation
- + Remove edges based on street length divided by population size or amenity size. Keep removing edges until the correct fraction is met.
- + For every transit station, check if it is located on an edge that is now pedestrian area. If so, relocate it to the nearest node allowing cars (or road if possible)
- + For every neighborhood:
-  + For all 5 points, calculate the distance to the nearest transit station.
-  + For every demographic group, add the average distance divided by the number of that demographic group
-
+- Simulation
+ + Calculate number of edges to remove
+ + Sort edges based on length / population or amenity.
+ + Remove number of edges in database
+ + Remove number of edges in Network
+ + Per transit, determine if still connected to at least 2 edges. If not, relocate.
+ + Per neighborhood 
+  + Calculate distance from 5 points to closest transit
+  + Store the the average of the distance to the 5 points.
+  + Calculate for every demographic group, this average multiplied by the percentage of the demographic group of the total.
+- Visualization
+ + Old network
+ + New, transformed network
+  - Color neighborhoods by increase/decrease in distance. 
+ + Bar diagram with bar for every demographic groups average increase/decrease in distance.
