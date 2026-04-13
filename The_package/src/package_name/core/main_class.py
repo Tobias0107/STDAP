@@ -12,7 +12,7 @@
 # none yet
 
 # Import classes and exceptions
-from _classes import Neighborhood, CBS, Network
+from _classes import Database, Network
 from package_name.exceptions import Initializing_error
 
 
@@ -31,12 +31,12 @@ class simulator:
     
     def __init__(self, csv: str, geopackage:str) -> None:
         """ Initializes new instance of the simulator for the given datasets """
+        self.database = Database(csv, geopackage)
         self.network = None
-        self.kwb = CBS(csv, geopackage)
 
     def get_cities(self):
         """ Returns a list of cities available in the given datasets """
-        return self.kwb.get_cities()
+        return self.database.get_cities()
 
     def choose_city(self, city: str):
         """
@@ -64,5 +64,5 @@ class simulator:
             raise Initializing_error("City not yet initialized. Before running" \
             "this simulation, call 'choose_city' first. For details, see manual.")
         
-        return Sim_trans_dist.run_simulation(self.network, self.kwb, fraction,
+        return Sim_trans_dist.run_simulation(self.network, self.database, fraction,
                                              demographic_groups, visual_options)

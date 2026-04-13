@@ -15,54 +15,59 @@ from shapely import wkb
 from package_name.utils.util_OSMnx import get_graph
 
 
-class Neighborhood:
-    # All information that should be stored
-    def __init__(self) -> None:
-        pass
-
-
-class CBS:
+class Database:
     def __init__(self, csv: str, geopackage: str) -> None:
         """ Initialise database by merging csv and geopackage """
 
+        # Creating a connection to a new database (in memory)
+        self.conn = db.connect()
+
         # Initializing a spatial database
-        db.sql("INSTALL spatial;")
-        db.sql("LOAD spatial;")
-        # Joining the two files into one database
+        self.conn.sql("INSTALL spatial;")
+        self.conn.sql("LOAD spatial;")
+
+        # Joining the two files into one database (Using only buurtcode and geom from geopackage)
         query = f"""
-            CREATE TABLE database AS
+            CREATE TABLE CBS AS
             SELECT *
             FROM read_csv('{csv}') c
             JOIN (SELECT buurtcode, geom FROM ST_Read('{geopackage}')) g
             ON c.gwb_code = g.buurtcode
             """
-        db.sql(query)
+        self.conn.sql(query)
 
-    def to_csv(self, path: str, limit=10):
-        db.sql(f"SELECT * FROM database LIMIT {limit}").to_csv(path)
+    def to_csv(self, limit=10):
+        """ Convert every table in database to a csv with given limit. For debugging purposes only. """
+        self.conn.sql(f"SELECT * FROM CBS LIMIT {limit}").to_csv("CBS_database_preview.csv")
+        self.conn.sql(f"SELECT * FROM Neighborhood LIMIT {limit}").to_csv("Neighborhood_database_preview.csv")
+        self.conn.sql(f"SELECT * FROM Graph LIMIT {limit}").to_csv("Graph_database_preview.csv")
+        self.conn.sql(f"SELECT * FROM Neighborhood_pts LIMIT {limit}").to_csv("Neighborhood_pts_database_preview.csv")
 
     def get_cities(self):
-        """ Get all "gemeente_naam" from database """
+        """ Get all "gemeente_naam" from database. Returns list of cities. """
         query = """
             SELECT DISTINCT gm_naam
             FROM database
-            GROUP BY gm_naam
             """
-        res = db.sql(query).fetchnumpy()
+        res = self.conn.sql(query).fetchnumpy()
         return res["gm_naam"].tolist()
     
-    def get_neighborhood_borders(self, city):
+    def pre_process(self):
         """
-            Get normal pandas dataframe containing the geometry in the form of
-            a bytearray (WKB).
+            Starts the pre-processing progress.
+            Should be called before running the simulations and after choosing the city (performance)
+            Turns CBS into Neighborhood table for specific city.
+            Finds and creates neighborhood points representing each neighborhood (Neighborhood_pts table)
+            See outer design.
         """
-        query = f"""
-            SELECT regio, ST_AsWKB(geom) as geometry
-            FROM database
-            WHERE gm_naam = '{city}' AND recs = 'Buurt'
-            """
-        df = db.sql(query).df()
-        return df
+        pass
+    
+    def load_network(self, nodes):
+        """
+            Load the nodes of a OSMnx graph into the database for later data analysis.
+            This operation creates the Graph table (see outer_design).
+        """
+        pass
 
 class Network:
     def __init__(self, city: str) -> None:
@@ -70,11 +75,3 @@ class Network:
             Get OSMnx network of city
         """
         self.graph = get_graph(city)
-        self.gdf_nodes, self.gdf_edges = ox.graph_to_gdfs(self.graph)
-        self.known_neighborhoods: dict[int, Neighborhood] = dict()
-
-    def load_neighborhoods(self, geodata: gpd.GeoDataFrame):
-        print(self.gdf_nodes)
-        print()
-        print(geodata)
-

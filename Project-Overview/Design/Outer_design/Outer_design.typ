@@ -88,7 +88,7 @@ demographic_info consists of multiple columns all containing information about d
 This table contains all nodes within the urban street network, including basic information about the node to be stored. The r_idx can be used for better performance for geometry based filtering of large datasets.
 
 == Neighborhood
-The Neighborhood class is the cleaned up version of CBS. It contains only information about neighborhoods ("Buurten"). Some of the columns are pre-processed to contain more relevant information like the population density.
+The Neighborhood class is the cleaned up version of CBS. It contains only information about neighborhoods ("Buurten") for the specific city chosen. Some of the columns are pre-processed to contain more relevant information like the population density.
 
 == Neighborhood_pts
 #image("database.svg")
