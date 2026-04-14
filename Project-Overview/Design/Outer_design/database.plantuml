@@ -15,12 +15,13 @@ entity CBS {
 
 ' For data-analysis on the nodes of a large OSMnx graph
 entity Graph {
-    *node <<primary_key>>
+    *node_id <<primary_key>>
+    *street_count
     *loc <<POINT>>
-    r_idx <<performance>>
-    zone <<performance>>
+    neighborhood <<performance>>
     node_info
 }
+
 
 ' The 5 points representing a neighborhood. Every point is a single column to
 ' allow customizable number of points per neighborhood. 

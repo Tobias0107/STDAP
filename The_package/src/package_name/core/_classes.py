@@ -71,7 +71,7 @@ class Database:
                     id BIGINT PRIMARY KEY,
                     street_count INTEGER,
                     point GEOMETRY,
-                    zone_id VARCHAR
+                    neighborhood_id VARCHAR
                 );         
             """)
 
@@ -88,15 +88,59 @@ class Database:
             Turns CBS into Neighborhood table for specific city.
             Finds and creates neighborhood points representing each neighborhood (Neighborhood_pts table)
             See outer design.
+
+            Deletes Neighborhood table if exists
         """
-        # Per node, determine the zone
+        # Create new Neighborhood table for city
+        self.conn.sql(f"""
+            DROP TABLE IF EXISTS Neighborhood
+        """)
+        self.conn.sql(f"""
+            CREATE TABLE Neighborhood (
+                id BIGINT PRIMARY KEY,
+                tot_padestrian_street BIGINT,
+                tot_car_street BIGINT,
+                pop_density FLOAT,
+                amenity_density FLOAT,
+                male_density FLOAT,
+                female_density FLOAT,
+                age_density_15_24 FLOAT,
+                age_density_25_44 FLOAT,
+                age_density_45_64 FLOAT,
+                age_density_65_oo FLOAT,
+                background_density_nl FLOAT,
+                background_density_eu FLOAT,
+                background_density_neu FLOAT,
+                birthplace_density_nl FLOAT,
+                birthplace_density_eu FLOAT,
+                birthplace_density_neu FLOAT,
+                low_education_density FLOAT,
+                medium_education_density FLOAT,
+                high_education_density FLOAT,
+                low_income_density FLOAT,
+                high_income_density FLOAT,
+                risk_poverty_density FLOAT,
+            );
+        """)
+        # Obtain total street length
+        
+
+        # Get density values (based on area)
+        self.conn.query("""
+            INSERT INTO Neighborhood (*)
+            VALUES (
+                        )
+        """)
+        
+
+
+        # Per node, determine the neighborhood
         zones = f"(SELECT gwb_code, geom FROM CBS WHERE recs='Buurt' AND gm_naam='{city}')"
         self.conn.sql(f"""
-                INSERT INTO Graph (zone_id)
-                SELECT z.gwb_code
-                FROM Graph g
-                JOIN {zones} z
-                ON ST_Within(g.point, z.geom)
+                UPDATE Graph g
+                SET neighborhood_id = z.gwb_code
+                FROM {zones} z
+                WHERE ST_Within(g.point, z.geom)
             """)
 
         # Per zone, determine the pop_density, amenity_density, number of transit
