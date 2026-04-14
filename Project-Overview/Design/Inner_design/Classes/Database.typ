@@ -1,5 +1,5 @@
 = Database
-#image("database.svg")
+#image("../../Outer_design/database.svg")
 == Data stored:
 === connection to database
 This is the link to the 'in memory' database. It is easy to have the database written to a specific file, but this shouldn't be necessary, and only creates overhead.

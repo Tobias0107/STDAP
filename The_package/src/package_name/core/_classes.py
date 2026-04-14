@@ -38,67 +38,11 @@ class Database:
             """
         self.conn.sql(query)
 
-    def to_csv(self, limit=10):
-        """ Convert every table in database to a csv with given limit. For debugging purposes only. """
-        self.conn.sql(f"SELECT * FROM CBS LIMIT {limit}").to_csv("CBS_database_preview.csv")
-        # self.conn.sql(f"SELECT * FROM Neighborhood LIMIT {limit}").to_csv("Neighborhood_database_preview.csv")
-        self.conn.sql(f"SELECT * FROM Graph LIMIT {limit}").to_csv("Graph_database_preview.csv")
-        # self.conn.sql(f"SELECT * FROM Neighborhood_pts LIMIT {limit}").to_csv("Neighborhood_pts_database_preview.csv")
-
-    def get_cities(self):
-        """ Get all "gemeente_naam" from database. Returns list of cities. """
-        query = """
-            SELECT DISTINCT gm_naam
-            FROM CBS
-            """
-        res = self.conn.sql(query).fetchnumpy()
-        return res["gm_naam"].tolist()
-    
-    def load_network(self, OSMnx_graph: nx.MultiDiGraph):
-        """
-            Load the nodes of a OSMnx graph into the database for later data analysis.
-            This operation creates the Graph table (see outer_design).
-            The columns in the nodes explained:
-            This operation also removes any existing graphs from the database
-        """
-        self.conn.sql("DROP TABLE IF EXISTS Graph")
-
-        nodes = ox.convert.graph_to_gdfs(OSMnx_graph, edges=False, fill_edge_geometry=False)
-        nodes_arrow = nodes.to_arrow()
-
-        self.conn.sql("""
-               CREATE TABLE Graph (
-                    id BIGINT PRIMARY KEY,
-                    street_count INTEGER,
-                    point GEOMETRY,
-                    neighborhood_id VARCHAR
-                );         
-            """)
-
-        self.conn.sql( """
-                INSERT INTO Graph (id, street_count, point)
-                SELECT osmid, street_count, geometry
-                FROM nodes_arrow
-            """ )
-
-    def pre_process(self, city:str):
-        """
-            Starts the pre-processing progress.
-            Should be called before running the simulations and after choosing the city (performance)
-            Turns CBS into Neighborhood table for specific city.
-            Finds and creates neighborhood points representing each neighborhood (Neighborhood_pts table)
-            See outer design.
-
-            Deletes Neighborhood table if exists
-        """
-        # Create new Neighborhood table for city
-        self.conn.sql(f"""
-            DROP TABLE IF EXISTS Neighborhood
-        """)
+        # Creating all other tables (initialized empty)
         self.conn.sql(f"""
             CREATE TABLE Neighborhood (
                 id BIGINT PRIMARY KEY,
-                tot_padestrian_street BIGINT,
+                tot_pedestrian_street BIGINT,
                 tot_car_street BIGINT,
                 pop_density FLOAT,
                 amenity_density FLOAT,
@@ -121,23 +65,96 @@ class Database:
                 high_income_density FLOAT,
                 risk_poverty_density FLOAT,
             );
+            CREATE TABLE Graph_nodes (
+                id BIGINT PRIMARY KEY,
+                street_count INTEGER,
+                point GEOMETRY,
+                neighborhood_id VARCHAR
+            );
+            CREATE TABLE Graph_edges (
+                u BIGINT,
+                v BIGINT,
+                key INTEGER,
+                length FLOAT NOT NULL,
+                width FLOAT,
+                geometry GEOMETRY NOT NULL,
+                max_speed INTEGER,
+                oneway BOOLEAN,
+                PRIMARY KEY (u, v, key)
+            );    
         """)
+
+    def to_csv(self, limit=10):
+        """ Convert every table in database to a csv with given limit. For debugging purposes only. """
+        self.conn.sql(f"SELECT * FROM CBS LIMIT {limit}").to_csv("CBS_database_preview.csv")
+        # self.conn.sql(f"SELECT * FROM Neighborhood LIMIT {limit}").to_csv("Neighborhood_database_preview.csv")
+        self.conn.sql(f"SELECT * FROM Graph_nodes LIMIT {limit}").to_csv("Graph_nodes_database_preview.csv")
+        self.conn.sql(f"SELECT * FROM Graph_edges LIMIT {limit}").to_csv("Graph_edges_database_preview.csv")
+        # self.conn.sql(f"SELECT * FROM Neighborhood_pts LIMIT {limit}").to_csv("Neighborhood_pts_database_preview.csv")
+
+    def get_cities(self):
+        """ Get all "gemeente_naam" from database. Returns list of cities. """
+        query = """
+            SELECT DISTINCT gm_naam
+            FROM CBS
+            """
+        res = self.conn.sql(query).fetchnumpy()
+        return res["gm_naam"].tolist()
+    
+    def load_network(self, OSMnx_graph: nx.MultiDiGraph):
+        """
+            Load the nodes of a OSMnx graph into the database for later data analysis.
+            This operation creates the Graph table (see outer_design).
+            The columns in the nodes explained:
+            This operation also removes any existing graphs from the database
+        """
+        # Remove all entries in Graph_nodes
+        self.conn.sql("DELETE FROM Graph_nodes")
+
+        # Extract geopandas dataframes
+        nodes_df, edges_df = ox.convert.graph_to_gdfs(OSMnx_graph)
+        
+        # Make them importable by duckdb
+        nodes = nodes_df.to_arrow()
+        edges_df = edges_df.reset_index()
+        edges_df["geometry"] = edges_df["geometry"].astype(str)
+        self.conn.register("edges", edges_df)
+
+        self.conn.sql("""
+                INSERT INTO Graph_nodes (id, street_count, point)
+                SELECT osmid, street_count, geometry
+                FROM nodes
+            """)
+        self.conn.sql("""
+                INSERT INTO Graph_edges (u, v, key, length, width, geometry, max_speed, oneway)
+                SELECT u, v, key, length, width, ST_GeomFromText(geometry), maxspeed, oneway
+                FROM edges
+            """)
+        
+
+    def pre_process(self, city:str):
+        """
+            Starts the pre-processing progress.
+            Should be called before running the simulations and after choosing the city (performance)
+            Turns CBS into Neighborhood table for specific city.
+            Finds and creates neighborhood points representing each neighborhood (Neighborhood_pts table)
+            See outer design.
+
+            Deletes Neighborhood table if exists
+        """
+        # Remove all entries from neighborhood
+        self.conn.sql("DELETE FROM Neighborhood")
+        
         # Obtain total street length
         
 
         # Get density values (based on area)
-        self.conn.query("""
-            INSERT INTO Neighborhood (*)
-            VALUES (
-                        )
-        """)
-        
 
 
         # Per node, determine the neighborhood
         zones = f"(SELECT gwb_code, geom FROM CBS WHERE recs='Buurt' AND gm_naam='{city}')"
         self.conn.sql(f"""
-                UPDATE Graph g
+                UPDATE Graph_nodes g
                 SET neighborhood_id = z.gwb_code
                 FROM {zones} z
                 WHERE ST_Within(g.point, z.geom)

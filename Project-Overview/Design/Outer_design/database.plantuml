@@ -14,12 +14,20 @@ entity CBS {
 }
 
 ' For data-analysis on the nodes of a large OSMnx graph
-entity Graph {
+entity Graph_nodes {
     *node_id <<primary_key>>
     *street_count
     *loc <<POINT>>
     neighborhood <<performance>>
     node_info
+}
+
+entity Graph_edges {
+    *edge_id <<primary_key>>
+    *node1
+    *node2
+    *length
+    edge_info
 }
 
 
@@ -53,9 +61,10 @@ CBS ||--|| Neighborhood
 CBS::gwb_code |o--o{  Neighborhood_pts::gwb_code
 Neighborhood::gwb_code |o--o{  Neighborhood_pts::gwb_code
 
-CBS::geom ||--o{ Graph::zone
-Neighborhood::geom ||--o{ Graph::zone
+CBS::geom ||--o{ Graph_nodes::zone
+Neighborhood::geom ||--o{ Graph_nodes::zone
 
-
+Graph_edges::node1 ||--|| Graph_nodes::node_id
+Graph_edges::node2 ||--|| Graph_nodes::node_id
 
 @enduml

@@ -84,8 +84,11 @@ The attributes with a large black dot before them are required items. \
 This table contains the merged form of the csv and geopackage . It contains the core numbers per neighborhood from the CBS including the borders of the neighborhoods. \
 demographic_info consists of multiple columns all containing information about different demographic groups within a neighborhood.
 
-== Graph
-This table contains all nodes within the urban street network, including basic information about the node to be stored. The r_idx can be used for better performance for geometry based filtering of large datasets.
+== Graph_nodes
+This table contains all nodes within the urban street network, including basic information about the node to be stored. (One entry (row) per node)
+
+== Graph_edges
+This table contains all edges within the urban street network, including basic information about the edge. 
 
 == Neighborhood
 The Neighborhood class is the cleaned up version of CBS. It contains only information about neighborhoods ("Buurten") for the specific city chosen. Some of the columns are pre-processed to contain more relevant information like the population density.

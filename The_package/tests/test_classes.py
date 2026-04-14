@@ -21,13 +21,13 @@ class TestDatabase:
         database2 = Database(csv, geopackage)
 
     def test_get_cities(self):
-        database.get_cities()
+        assert len(database.get_cities()) == 342
 
     def test_load_network(self):
         database.load_network(network.graph)
 
     def test_pre_process(self):
-        database.load_network(network.graph)
+        # database.load_network(network.graph)
         database.pre_process("Amsterdam")
         database.to_csv()
 

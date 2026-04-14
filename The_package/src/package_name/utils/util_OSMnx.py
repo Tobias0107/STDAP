@@ -16,6 +16,6 @@ def get_graph(city:str, network_type="drive"):
         The type of roads to import: default = 'drive' (car-accessible).
     """
     ox.settings.bidirectional_network_types += network_type
-    G = ox.graph_from_place(f"{city}, Netherlands", simplify=True, network_type=network_type)
+    G = ox.graph_from_place(f"{city}, Netherlands", simplify=True, retain_all=True, network_type=network_type)
     return ox.project_graph(G, to_crs="epsg:28992", to_latlong=False)
 
