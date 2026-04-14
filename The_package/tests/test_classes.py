@@ -15,20 +15,21 @@ geopackage = "tests/TestDatasets/test.gpkg"
 
 network = Network("Amsterdam")
 database = Database(csv, geopackage)
-database.to_csv()
 
 class TestDatabase:
     def test_init(self):
-        pass
+        database2 = Database(csv, geopackage)
 
     def test_get_cities(self):
-        pass
-
-    def test_get_neighborhood_borders(self):
-        pass
+        database.get_cities()
 
     def test_load_network(self):
         database.load_network(network.graph)
+
+    def test_pre_process(self):
+        database.load_network(network.graph)
+        database.pre_process("Amsterdam")
+        database.to_csv()
 
 
 class TestNetwork:

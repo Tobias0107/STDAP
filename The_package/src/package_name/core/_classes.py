@@ -42,14 +42,14 @@ class Database:
         """ Convert every table in database to a csv with given limit. For debugging purposes only. """
         self.conn.sql(f"SELECT * FROM CBS LIMIT {limit}").to_csv("CBS_database_preview.csv")
         # self.conn.sql(f"SELECT * FROM Neighborhood LIMIT {limit}").to_csv("Neighborhood_database_preview.csv")
-        # self.conn.sql(f"SELECT * FROM Graph LIMIT {limit}").to_csv("Graph_database_preview.csv")
+        self.conn.sql(f"SELECT * FROM Graph LIMIT {limit}").to_csv("Graph_database_preview.csv")
         # self.conn.sql(f"SELECT * FROM Neighborhood_pts LIMIT {limit}").to_csv("Neighborhood_pts_database_preview.csv")
 
     def get_cities(self):
         """ Get all "gemeente_naam" from database. Returns list of cities. """
         query = """
             SELECT DISTINCT gm_naam
-            FROM database
+            FROM CBS
             """
         res = self.conn.sql(query).fetchnumpy()
         return res["gm_naam"].tolist()
@@ -59,19 +59,24 @@ class Database:
             Load the nodes of a OSMnx graph into the database for later data analysis.
             This operation creates the Graph table (see outer_design).
             The columns in the nodes explained:
+            This operation also removes any existing graphs from the database
         """
+        self.conn.sql("DROP TABLE IF EXISTS Graph")
+
         nodes = ox.convert.graph_to_gdfs(OSMnx_graph, edges=False, fill_edge_geometry=False)
         nodes_arrow = nodes.to_arrow()
+
         self.conn.sql("""
                CREATE TABLE Graph (
                     id BIGINT PRIMARY KEY,
                     street_count INTEGER,
                     point GEOMETRY,
-                    zone BIGINT
+                    zone_id VARCHAR
                 );         
             """)
+
         self.conn.sql( """
-                INSERT INTO Graph (id, street_count, geometry)
+                INSERT INTO Graph (id, street_count, point)
                 SELECT osmid, street_count, geometry
                 FROM nodes_arrow
             """ )
@@ -85,14 +90,14 @@ class Database:
             See outer design.
         """
         # Per node, determine the zone
-        zones = "(SELECT DISTINCT gwb_code FROM CBS WHERE recs='Buurt')"
-        query = f"""
-                INSERT INTO Graph (zone)
-                SELECT z.zone
-                FROM {zones} z
-                JOIN Graph g
-                ON 
-            """
+        zones = f"(SELECT gwb_code, geom FROM CBS WHERE recs='Buurt' AND gm_naam='{city}')"
+        self.conn.sql(f"""
+                INSERT INTO Graph (zone_id)
+                SELECT z.gwb_code
+                FROM Graph g
+                JOIN {zones} z
+                ON ST_Within(g.point, z.geom)
+            """)
 
         # Per zone, determine the pop_density, amenity_density, number of transit
         # Use this to create the Neighborhood table

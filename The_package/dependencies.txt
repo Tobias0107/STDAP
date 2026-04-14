@@ -8,3 +8,5 @@ geopandas
 
 pyarrow # Used for conversion between geopandas to duckdb
 
+pytest # Used for testing
+
