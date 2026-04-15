@@ -4,6 +4,8 @@
     The tests are written using pytest.
 
     In practice tests are written for every method where possible.
+
+    Run from The_package as root: pytest --durations=0 -s --verbose
 """
 
 import pytest
@@ -13,7 +15,7 @@ from package_name.core._classes import Database, Network
 csv = "tests/TestDatasets/test.csv"
 geopackage = "tests/TestDatasets/test.gpkg"
 
-network = Network("Amsterdam")
+network = Network("Amsterdam", store_in_file=True)
 database = Database(csv, geopackage)
 
 class TestDatabase:

@@ -1,1 +1,2 @@
 # Nested gitignore for specific points
+*cache*

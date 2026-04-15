@@ -7,6 +7,7 @@
 import duckdb as db
 import osmnx as ox
 import networkx as nx
+import os
 import pandas as pd
 import geopandas as gpd
 from shapely import wkb
@@ -26,28 +27,47 @@ class Database:
         # Initializing a spatial database
         self.conn.sql("INSTALL spatial;")
         self.conn.sql("LOAD spatial;")
-        # self.conn.sql("CALL register_geoarrow_extensions()")
 
-        # Joining the two files into one database (Using only buurtcode and geom from geopackage)
-        query = f"""
-            CREATE TABLE CBS AS
-            SELECT *
-            FROM read_csv('{csv}') c
-            JOIN (SELECT buurtcode, geom FROM ST_Read('{geopackage}')) g
-            ON c.gwb_code = g.buurtcode
-            """
-        self.conn.sql(query)
+        # Auto increment initialization
+        self.conn.sql("CREATE SEQUENCE seq_pts_id START 1;")
 
         # Creating all other tables (initialized empty)
         self.conn.sql(f"""
+            CREATE TABLE CBS (
+                id VARCHAR PRIMARY KEY,
+                regio VARCHAR NOT NULL,
+                gm_naam VARCHAR NOT NULL,
+                recs VARCHAR NOT NULL,
+                pop UBIGINT NOT NULL,
+                male UBIGINT,
+                female UBIGINT,
+                age_00_14 UBIGINT,
+                age_15_24 UBIGINT,
+                age_25_44 UBIGINT,
+                age_45_64 UBIGINT,
+                age_65_oo UBIGINT,
+                background_nl UBIGINT,
+                background_eu UBIGINT,
+                background_neu UBIGINT,
+                birthplace_nl UBIGINT,
+                birthplace_eu UBIGINT,
+                birthplace_neu UBIGINT,
+                low_education UBIGINT,
+                medium_education UBIGINT,
+                high_education UBIGINT,
+                low_income UBIGINT,
+                high_income UBIGINT,
+                risk_poverty UBIGINT,
+                geom GEOMETRY
+            );
             CREATE TABLE Neighborhood (
-                id BIGINT PRIMARY KEY,
-                tot_pedestrian_street BIGINT,
-                tot_car_street BIGINT,
+                id VARCHAR PRIMARY KEY,
+                regio VARCHAR,
                 pop_density FLOAT,
                 amenity_density FLOAT,
                 male_density FLOAT,
                 female_density FLOAT,
+                age_density_00_14 FLOAT,
                 age_density_15_24 FLOAT,
                 age_density_25_44 FLOAT,
                 age_density_45_64 FLOAT,
@@ -68,7 +88,7 @@ class Database:
             CREATE TABLE Graph_nodes (
                 id BIGINT PRIMARY KEY,
                 street_count INTEGER,
-                point GEOMETRY,
+                loc GEOMETRY,
                 neighborhood_id VARCHAR
             );
             CREATE TABLE Graph_edges (
@@ -76,21 +96,60 @@ class Database:
                 v BIGINT,
                 key INTEGER,
                 length FLOAT NOT NULL,
-                width FLOAT,
                 geometry GEOMETRY NOT NULL,
-                max_speed INTEGER,
                 oneway BOOLEAN,
                 PRIMARY KEY (u, v, key)
-            );    
+            );
+            CREATE TABLE Neighborhood_pts (
+                neighborhood_id VARCHAR,
+                pts_id INTEGER DEFAULT NEXTVAL('seq_pts_id'),
+                pt GEOMETRY,
+                PRIMARY KEY (neighborhood_id, pts_id)
+            );
         """)
+
+        # Joining the two files into one database (Using only buurtcode and geom from geopackage)
+        # Only the (possibly) needed fields are imported from the datasets.
+        self.conn.sql(f"""
+            INSERT INTO CBS
+            SELECT
+                c.gwb_code,
+                c.regio,
+                c.gm_naam,
+                c.recs,
+                c.a_inw,
+                c.a_man,
+                c.a_vrouw,
+                c.a_00_14,
+                c.a_15_24,
+                c.a_25_44,
+                c.a_45_64,
+                c.a_65_oo,
+                c.a_nl_all,
+                c.a_eur_al,
+                c.a_neu_al,
+                c.a_geb_nl,
+                c.a_geb_eu,
+                c.a_geb_ne,
+                c.a_opl_lg,
+                c.a_opl_md,
+                c.a_opl_hg,
+                c.p_ink_li,
+                c.p_ink_hi,
+                c.p_ink_ar,
+                g.geom
+            FROM read_csv('{csv}', nullstr='.') c
+            JOIN (SELECT buurtcode, geom FROM ST_Read('{geopackage}')) g
+            ON c.gwb_code = g.buurtcode
+            """)
 
     def to_csv(self, limit=10):
         """ Convert every table in database to a csv with given limit. For debugging purposes only. """
         self.conn.sql(f"SELECT * FROM CBS LIMIT {limit}").to_csv("CBS_database_preview.csv")
-        # self.conn.sql(f"SELECT * FROM Neighborhood LIMIT {limit}").to_csv("Neighborhood_database_preview.csv")
+        self.conn.sql(f"SELECT * FROM Neighborhood LIMIT {limit}").to_csv("Neighborhood_database_preview.csv")
         self.conn.sql(f"SELECT * FROM Graph_nodes LIMIT {limit}").to_csv("Graph_nodes_database_preview.csv")
         self.conn.sql(f"SELECT * FROM Graph_edges LIMIT {limit}").to_csv("Graph_edges_database_preview.csv")
-        # self.conn.sql(f"SELECT * FROM Neighborhood_pts LIMIT {limit}").to_csv("Neighborhood_pts_database_preview.csv")
+        self.conn.sql(f"SELECT * FROM Neighborhood_pts LIMIT {limit}").to_csv("Neighborhood_pts_database_preview.csv")
 
     def get_cities(self):
         """ Get all "gemeente_naam" from database. Returns list of cities. """
@@ -120,14 +179,15 @@ class Database:
         edges_df["geometry"] = edges_df["geometry"].astype(str)
         self.conn.register("edges", edges_df)
 
+        # Import them into duckdb
         self.conn.sql("""
-                INSERT INTO Graph_nodes (id, street_count, point)
+                INSERT INTO Graph_nodes (id, street_count, loc)
                 SELECT osmid, street_count, geometry
                 FROM nodes
             """)
         self.conn.sql("""
-                INSERT INTO Graph_edges (u, v, key, length, width, geometry, max_speed, oneway)
-                SELECT u, v, key, length, width, ST_GeomFromText(geometry), maxspeed, oneway
+                INSERT INTO Graph_edges (u, v, key, length, geometry, oneway)
+                SELECT u, v, key, length, ST_GeomFromText(geometry), oneway
                 FROM edges
             """)
         
@@ -145,19 +205,52 @@ class Database:
         # Remove all entries from neighborhood
         self.conn.sql("DELETE FROM Neighborhood")
         
-        # Obtain total street length
-        
+        # Obtain total street length 
+        tot_street_length = "SELECT sum(length) as tot_street FROM Graph_edges"
+
+        # Obtain amenity density
 
         # Get density values (based on area)
+        # CBS (ST_Area(geom))
 
+        self.conn.sql(f"""
+                INSERT INTO Neighborhood
+                SELECT 
+                    id,
+                    regio,
+                    pop / area,
+                    NULL,
+                    male / area,
+                    female / area,
+                    age_00_14 / area,
+                    age_15_24 / area,
+                    age_25_44 / area,
+                    age_45_64 / area,
+                    age_65_oo / area,
+                    background_nl / area,
+                    background_eu / area,
+                    background_neu / area,
+                    birthplace_nl / area,
+                    birthplace_eu / area,
+                    birthplace_neu / area,
+                    low_education / area,
+                    medium_education / area,
+                    high_education / area,
+                    low_income / area,
+                    high_income / area,
+                    risk_poverty / area,
+                FROM (SELECT *, ST_Area(geom) as area
+                      FROM CBS
+                      WHERE gm_naam='{city}' AND recs='Buurt')
+            """)
 
         # Per node, determine the neighborhood
-        zones = f"(SELECT gwb_code, geom FROM CBS WHERE recs='Buurt' AND gm_naam='{city}')"
+        zones = f"(SELECT id, geom FROM CBS WHERE recs='Buurt' AND gm_naam='{city}')"
         self.conn.sql(f"""
                 UPDATE Graph_nodes g
-                SET neighborhood_id = z.gwb_code
+                SET neighborhood_id = z.id
                 FROM {zones} z
-                WHERE ST_Within(g.point, z.geom)
+                WHERE ST_Within(g.loc, z.geom)
             """)
 
         # Per zone, determine the pop_density, amenity_density, number of transit
@@ -165,8 +258,16 @@ class Database:
 
 
 class Network:
-    def __init__(self, city: str) -> None:
+    def __init__(self, city: str, store_in_file=False, store_path='network_cache/') -> None:
         """
-            Get OSMnx network of city
+            Get OSMnx network of city.
+            If store_in_file=True, writes a copy of the original imported network to a store_path.
+            If such a copy exists, initialization will use this copy instead of the OSMnx api.
         """
-        self.graph = get_graph(city)
+        if os.path.isfile(f"{store_path}{city}.graphml"):
+            self.graph = ox.io.load_graphml(f"{store_path}{city}.graphml")
+        else:
+            self.graph = get_graph(city)
+            if store_in_file:
+                ox.io.save_graphml(self.graph, f"{store_path}{city}.graphml")
+
