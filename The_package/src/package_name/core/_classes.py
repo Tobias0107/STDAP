@@ -19,7 +19,23 @@ from package_name.utils.util_OSMnx import get_graph
 
 class Database:
     def __init__(self, csv: str, geopackage: str) -> None:
-        """ Initialise database by merging csv and geopackage """
+        """
+        ### Expected:
+            - None
+        ### Parameters:
+            - csv:\n
+                The path to the csv Kerncijfers Wijken en Buurten (KWB) CBS
+            - geopackage:\n
+                The path to the geopackage containing the neighborhood borders CBS
+        ### Returns:
+            - Database object
+        ### Side-effects:
+            - Creates in-memory duckdb
+            - Stores connection to database to self.conn
+            - Loads spatial extension to duckdb
+            - Creates all tables for database (see design)
+            - Uses csv and geopackage to fill CBS table
+        """
 
         # Creating a connection to a new database (in memory)
         self.conn = db.connect()
@@ -152,7 +168,16 @@ class Database:
         self.conn.sql(f"SELECT * FROM Neighborhood_pts LIMIT {limit}").to_csv("Neighborhood_pts_database_preview.csv")
 
     def get_cities(self):
-        """ Get all "gemeente_naam" from database. Returns list of cities. """
+        """
+        ### Expected:
+            - None
+        ### Parameters:
+            - None
+        ### Returns:
+            - List of cities (local autoritjes) in the CBS datasets 
+        ### Side-effects:
+            - None
+        """
         query = """
             SELECT DISTINCT gm_naam
             FROM CBS
@@ -162,24 +187,32 @@ class Database:
     
     def load_network(self, OSMnx_graph: nx.MultiDiGraph):
         """
-            Load the nodes of a OSMnx graph into the database for later data analysis.
-            This operation creates the Graph table (see outer_design).
-            The columns in the nodes explained:
-            This operation also removes any existing graphs from the database
+        ### Expected:
+            - None
+        ### Parameters:
+            - OSMnx_graph:\n
+                An OSMnx Multigraph containing the network of a single city
+        ### Returns:
+            - None
+        ### Side-effects:
+            - (Re)create Graph_nodes Table
+            - (Re)create Graph_edges Table
+            - (Re)create Amenities Table
         """
-        # Remove all entries in Graph_nodes
+        # Remove all previous data from tables
         self.conn.sql("DELETE FROM Graph_nodes")
+        self.conn.sql("DELETE FROM Graph_edges")
 
-        # Extract geopandas dataframes
+        # Obtain data as GeoDataFrames (GeoPandas)
         nodes_df, edges_df = ox.convert.graph_to_gdfs(OSMnx_graph)
         
-        # Make them importable by duckdb
+        # Make GeoDataFrames importable by duckdb
         nodes = nodes_df.to_arrow()
         edges_df = edges_df.reset_index()
         edges_df["geometry"] = edges_df["geometry"].astype(str)
         self.conn.register("edges", edges_df)
 
-        # Import them into duckdb
+        # Import GeoDataFrames into duckdb
         self.conn.sql("""
                 INSERT INTO Graph_nodes (id, street_count, loc)
                 SELECT osmid, street_count, geometry
@@ -190,17 +223,19 @@ class Database:
                 SELECT u, v, key, length, ST_GeomFromText(geometry), oneway
                 FROM edges
             """)
-        
 
     def pre_process(self, city:str):
         """
-            Starts the pre-processing progress.
-            Should be called before running the simulations and after choosing the city (performance)
-            Turns CBS into Neighborhood table for specific city.
-            Finds and creates neighborhood points representing each neighborhood (Neighborhood_pts table)
-            See outer design.
-
-            Deletes Neighborhood table if exists
+        ### Expected:
+            - load_network called with network of given city
+        ### Parameters:
+            - city:\n
+                The city to do the pre_processing for.
+        ### Returns:
+            - None
+        ### Side-effects:
+            - Replace entries Neighborhood with entries new city pre-processed from CBS and Amenities
+            - Determine neighborhood for every node in Graph_nodes 
         """
         # Remove all entries from neighborhood
         self.conn.sql("DELETE FROM Neighborhood")
