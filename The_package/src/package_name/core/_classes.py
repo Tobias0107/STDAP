@@ -263,18 +263,18 @@ class Database:
             - None
         ### Side-effects:
             - (Re)create features Table with obtained features
-            - Gives value_error if both amenity and public_transport are False
         ### Notes:
             - Only tested with amenity and public_transport both True
         """
         # Delete any existing features
         self.conn.sql("DELETE FROM Features")
+        if not (amenity and public_transport):
+            return
 
         # Get features GeoDataFrame from OSMnx
         features_gdf = get_features(self.city, amenity, public_transport)
         
         # Make features importable in duckdb
-
         features_arrow = features_gdf.to_arrow()
         self.conn.register("features_arrow", features_arrow)
 
@@ -296,13 +296,14 @@ class Database:
                     highway
                 FROM features_arrow
             """)
-        
     
     def pre_process(self):
         """
         ### Expected:
             - City set (set_city())
             - Network loaded (load_network())
+            - Features loaded (load_features) (optional):\n
+                features not loaded, will result in NULL values in Neighborhood::Amenity_density 
         ### Parameters:
             - city:\n
                 The city to do the pre_processing for.
@@ -315,13 +316,8 @@ class Database:
         # Remove all entries from neighborhood
         self.conn.sql("DELETE FROM Neighborhood")
         
-        # Obtain total street length 
-        tot_street_length = "SELECT sum(length) as tot_street FROM Graph_edges"
-
-        # Obtain amenity density
-
-        # Get density values (based on area)
-        # CBS (ST_Area(geom))
+        # Obtain number of amenities
+        num_amenities = "(SELECT count(public_transport) FROM Features WHERE public_transport IS NOT NULL)"
 
         self.conn.sql(f"""
                 INSERT INTO Neighborhood
@@ -329,7 +325,7 @@ class Database:
                     id,
                     regio,
                     pop / area,
-                    NULL,
+                    {num_amenities} / area,
                     male / area,
                     female / area,
                     age_00_14 / area,
