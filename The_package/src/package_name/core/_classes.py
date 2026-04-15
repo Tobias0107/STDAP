@@ -118,6 +118,21 @@ class Database:
                 pt GEOMETRY,
                 PRIMARY KEY (neighborhood_id, pts_id)
             );
+            CREATE TABLE Features (
+                element VARCHAR,
+                id UBIGINT,
+                loc GEOMETRY,
+                bus VARCHAR,
+                name VARCHAR,
+                public_transport VARCHAR,
+                amenity VARCHAR,
+                railway VARCHAR,
+                train VARCHAR,
+                brand VARCHAR,
+                wheelchair VARCHAR,
+                highway VARCHAR,
+                PRIMARY KEY (element, id)
+            );
         """)
 
         # Joining the two files into one database (Using only buurtcode and geom from geopackage)
@@ -162,6 +177,7 @@ class Database:
         self.conn.sql(f"SELECT * FROM Graph_nodes LIMIT {limit}").to_csv("Graph_nodes_database_preview.csv")
         self.conn.sql(f"SELECT * FROM Graph_edges LIMIT {limit}").to_csv("Graph_edges_database_preview.csv")
         self.conn.sql(f"SELECT * FROM Neighborhood_pts LIMIT {limit}").to_csv("Neighborhood_pts_database_preview.csv")
+        self.conn.sql(f"SELECT * FROM Features LIMIT {limit}").to_csv("Features_database_preview.csv")
 
     def get_cities(self):
         """
@@ -247,12 +263,40 @@ class Database:
             - None
         ### Side-effects:
             - (Re)create features Table with obtained features
+            - Gives value_error if both amenity and public_transport are False
+        ### Notes:
+            - Only tested with amenity and public_transport both True
         """
+        # Delete any existing features
+        self.conn.sql("DELETE FROM Features")
+
+        # Get features GeoDataFrame from OSMnx
         features_gdf = get_features(self.city, amenity, public_transport)
-        features = features_gdf.to_arrow()
         
+        # Make features importable in duckdb
 
+        features_arrow = features_gdf.to_arrow()
+        self.conn.register("features_arrow", features_arrow)
 
+        # Fill Features table using GeoDataFrame
+        self.conn.sql("""
+                INSERT INTO Features
+                SELECT
+                    element,
+                    id,
+                    geometry,
+                    bus,
+                    name,
+                    public_transport,
+                    amenity,
+                    railway,
+                    train,
+                    brand,
+                    wheelchair,
+                    highway
+                FROM features_arrow
+            """)
+        
     
     def pre_process(self):
         """
