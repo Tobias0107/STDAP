@@ -8,13 +8,9 @@ import duckdb as db
 import osmnx as ox
 import networkx as nx
 import os
-import pandas as pd
-import geopandas as gpd
-from shapely import wkb
-
 
 # Importing helper functions from utils
-from package_name.utils.util_OSMnx import get_graph
+from package_name.utils.util_OSMnx import get_graph, get_features
 
 
 class Database:
@@ -185,6 +181,20 @@ class Database:
         res = self.conn.sql(query).fetchnumpy()
         return res["gm_naam"].tolist()
     
+    def set_city(self, city: str):
+        """
+        ### Expected:
+            - None
+        ### Parameters:
+            - city:\n
+                The city to perform the simulation on
+        ### Returns:
+            - None 
+        ### Side-effects:
+            - Remembers city (needed for later methods)
+        """
+        self.city = city
+    
     def load_network(self, OSMnx_graph: nx.MultiDiGraph):
         """
         ### Expected:
@@ -197,7 +207,6 @@ class Database:
         ### Side-effects:
             - (Re)create Graph_nodes Table
             - (Re)create Graph_edges Table
-            - (Re)create Amenities Table
         """
         # Remove all previous data from tables
         self.conn.sql("DELETE FROM Graph_nodes")
@@ -209,7 +218,7 @@ class Database:
         # Make GeoDataFrames importable by duckdb
         nodes = nodes_df.to_arrow()
         edges_df = edges_df.reset_index()
-        edges_df["geometry"] = edges_df["geometry"].astype(str)
+        edges_df["geometry"] = edges_df["geometry"].astype(str) # pyright: ignore[reportArgumentType]
         self.conn.register("edges", edges_df)
 
         # Import GeoDataFrames into duckdb
@@ -223,11 +232,33 @@ class Database:
                 SELECT u, v, key, length, ST_GeomFromText(geometry), oneway
                 FROM edges
             """)
-
-    def pre_process(self, city:str):
+        
+    def obtain_features(self, amenity=True, public_transport=True):
         """
         ### Expected:
-            - load_network called with network of given city
+            - City set (set_city())
+            - Network loaded (load_network())
+        ### Parameters:
+            - aminity:\n
+                If True: obtains all amenities
+            - public_transport:\n
+                If True: obtains all public transport
+        ### Returns:
+            - None
+        ### Side-effects:
+            - (Re)create features Table with obtained features
+        """
+        features_gdf = get_features(self.city, amenity, public_transport)
+        features = features_gdf.to_arrow()
+        
+
+
+    
+    def pre_process(self):
+        """
+        ### Expected:
+            - City set (set_city())
+            - Network loaded (load_network())
         ### Parameters:
             - city:\n
                 The city to do the pre_processing for.
@@ -235,7 +266,7 @@ class Database:
             - None
         ### Side-effects:
             - Replace entries Neighborhood with entries new city pre-processed from CBS and Amenities
-            - Determine neighborhood for every node in Graph_nodes 
+            - Determine neighborhood for every node in Graph_nodes
         """
         # Remove all entries from neighborhood
         self.conn.sql("DELETE FROM Neighborhood")
@@ -276,20 +307,17 @@ class Database:
                     risk_poverty / area,
                 FROM (SELECT *, ST_Area(geom) as area
                       FROM CBS
-                      WHERE gm_naam='{city}' AND recs='Buurt')
+                      WHERE gm_naam='{self.city}' AND recs='Buurt')
             """)
 
         # Per node, determine the neighborhood
-        zones = f"(SELECT id, geom FROM CBS WHERE recs='Buurt' AND gm_naam='{city}')"
+        zones = f"(SELECT id, geom FROM CBS WHERE recs='Buurt' AND gm_naam='{self.city}')"
         self.conn.sql(f"""
                 UPDATE Graph_nodes g
                 SET neighborhood_id = z.id
                 FROM {zones} z
                 WHERE ST_Within(g.loc, z.geom)
             """)
-
-        # Per zone, determine the pop_density, amenity_density, number of transit
-        # Use this to create the Neighborhood table
 
 
 class Network:

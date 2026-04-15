@@ -52,6 +52,14 @@ entity Neighborhood {
     demographic_info
 }
 
+entity Features {
+    *id,
+    *element,
+    *geom,
+    public_transit_info
+    amenity_info
+}
+
 
 ''''''''''''''''''''''''''''''''''''''
 '''''' Defining relations ''''''''''''

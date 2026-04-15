@@ -29,8 +29,16 @@ class TestDatabase:
         database.load_network(network.graph)
 
     def test_pre_process(self):
-        # database.load_network(network.graph)
-        database.pre_process("Amsterdam")
+        database.set_city("Amsterdam")
+        database.load_network(network.graph)
+        database.pre_process()
+
+    def test_obtain_features(self):
+        database.set_city("Amsterdam")
+        database.load_network(network.graph)
+        database.obtain_features()
+    
+    def test_show_database(self):
         database.to_csv()
 
 
