@@ -60,6 +60,31 @@ entity Features {
     amenity_info
 }
 
+entity GTFS_stop {
+    *stop_id <<primary_key>>
+    *loc <<POINT>>
+    stop_name
+}
+
+entity GTFS_route {
+    *route_id <<primary_key>>
+    route_type <<bus | tram | metro | train>>
+}
+
+entity GTFS_trip {
+    *trip_id <<primary_key>>
+    route_id
+    service_id
+}
+
+entity GTFS_stop_time {
+    *trip_id
+    *stop_id
+    arrival_time
+    departure_time
+    stop_sequence
+}
+
 
 ''''''''''''''''''''''''''''''''''''''
 '''''' Defining relations ''''''''''''
@@ -74,5 +99,14 @@ Neighborhood::geom ||--o{ Graph_nodes::zone
 
 Graph_edges::node1 ||--|| Graph_nodes::node_id
 Graph_edges::node2 ||--|| Graph_nodes::node_id
+
+
+GTFS_route ||--o{ GTFS_trip
+GTFS_trip ||--o{ GTFS_stop_time
+GTFS_stop ||--o{ GTFS_stop_time
+
+GTFS_trip ||--o{ GTFS_frequency
+
+Neighborhood_pts }o--o{ GTFS_stop : nearest
 
 @enduml

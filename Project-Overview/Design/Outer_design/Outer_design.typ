@@ -93,6 +93,22 @@ This table contains all edges within the urban street network, including basic i
 == Neighborhood
 The Neighborhood class is the cleaned up version of CBS. It contains only information about neighborhoods ("Buurten") for the specific city chosen. Some of the columns are pre-processed to contain more relevant information like the population density.
 
+== GTFS
+
+This table group contains the public transport schedule data based on the *General Transit Feed Specification (GTFS)*. Unlike the street network, which represents physical infrastructure, GTFS describes the *temporal structure of the transit system*—i.e., when and how vehicles move through the network.
+
+The GTFS data is organized across multiple related tables, each capturing a different aspect of transit operations:
+
+- *Stops* represent all transit stops and stations, including their geographic location. These form the interface between the walking network (OSM) and the transit system.
+- *Routes* define transit lines (e.g., bus, tram, metro), including the mode of transport.
+- *Trips* represent individual vehicle journeys along a route, typically corresponding to a specific departure and direction.
+- *Stop_times* define the exact arrival and departure times of each trip at each stop, forming the backbone of both travel time and frequency calculations.
+- *Frequencies* (optional) provide a compressed representation of high-frequency services using headways instead of exact timestamps.
+
+Within this project, GTFS is primarily used to derive two key components of accessibility:
+
+This structure allows the model to incorporate *time-dependent behavior*, such as variations in service frequency and travel times throughout the day, while remaining flexible with respect to the specific routing methodology used.
+
 == Neighborhood_pts
 #image("database.svg")
 
