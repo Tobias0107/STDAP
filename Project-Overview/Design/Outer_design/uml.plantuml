@@ -22,6 +22,7 @@ class Main_class {
 ' Data consists of the csv, geopackage, network nodes.
 class Database {
     Duckdb connection
+    Network network
 
     __init(csv, geopackage)
     Lst get_cities()
@@ -46,6 +47,7 @@ protocol Gui
 ''''''''''''''''''''''''''''''''''''''
 Main_class::data --> Database : is
 Main_class::network --> Network : is
+Database::network --> Network : is
 
 Gui ..|> Main_class : uses
 

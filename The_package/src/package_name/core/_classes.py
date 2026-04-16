@@ -8,9 +8,40 @@ import duckdb as db
 import osmnx as ox
 import networkx as nx
 import os
+import geopandas as gpd
 
 # Importing helper functions from utils
 from package_name.utils.util_OSMnx import get_graph, get_features
+
+
+class Network:
+    def __init__(self, city: str, store_in_file=False, store_dir='network_cache/') -> None:
+        """
+            Get OSMnx network of city.
+            If store_in_file=True, writes a copy of the original imported network to a store_path.
+            If such a copy exists, initialization will use this copy instead of the OSMnx api.
+        """
+        self.store_in_file = store_in_file
+        self.path = f"{store_dir}{city}"
+        self.city = city
+        if os.path.isfile(f"{self.path}.graphml"):
+            self.graph = ox.io.load_graphml(f"{self.path}.graphml")
+        else:
+            self.graph = get_graph(city)
+            if store_in_file:
+                ox.io.save_graphml(self.graph, f"{self.path}.graphml")
+
+    def get_nodes_and_edges(self):
+        return ox.convert.graph_to_gdfs(self.graph)
+
+    def get_features(self, amenity=True, public_transport=True):
+        if os.path.isfile(f"{self.path}.parquet"):
+            self.features = gpd.read_parquet(f"{self.path}.parquet")
+        else:
+            self.features = get_features(self.city, amenity, public_transport)
+            if self.store_in_file:
+                self.features.to_parquet(f"{self.path}.parquet")
+        return self.features
 
 
 class Database:
@@ -96,6 +127,7 @@ class Database:
                 low_income_density FLOAT,
                 high_income_density FLOAT,
                 risk_poverty_density FLOAT,
+                geometry GEOMETRY
             );
             CREATE TABLE Graph_nodes (
                 id BIGINT PRIMARY KEY,
@@ -186,7 +218,7 @@ class Database:
         ### Parameters:
             - None
         ### Returns:
-            - List of cities (local autoritjes) in the CBS datasets 
+            - List of cities (local autoritjes) in the CBS datasets
         ### Side-effects:
             - None
         """
@@ -196,7 +228,7 @@ class Database:
             """
         res = self.conn.sql(query).fetchnumpy()
         return res["gm_naam"].tolist()
-    
+
     def set_city(self, city: str):
         """
         ### Expected:
@@ -205,32 +237,34 @@ class Database:
             - city:\n
                 The city to perform the simulation on
         ### Returns:
-            - None 
+            - None
         ### Side-effects:
             - Remembers city (needed for later methods)
         """
         self.city = city
-    
-    def load_network(self, OSMnx_graph: nx.MultiDiGraph):
+
+    def load_network(self, network: Network):
         """
         ### Expected:
             - None
         ### Parameters:
-            - OSMnx_graph:\n
-                An OSMnx Multigraph containing the network of a single city
+            - Network:\n
+                An instance of the Network class containing the network of a single city
         ### Returns:
             - None
         ### Side-effects:
             - (Re)create Graph_nodes Table
             - (Re)create Graph_edges Table
         """
+        self.network = network
+
         # Remove all previous data from tables
         self.conn.sql("DELETE FROM Graph_nodes")
         self.conn.sql("DELETE FROM Graph_edges")
 
         # Obtain data as GeoDataFrames (GeoPandas)
-        nodes_df, edges_df = ox.convert.graph_to_gdfs(OSMnx_graph)
-        
+        nodes_df, edges_df = self.network.get_nodes_and_edges()
+
         # Make GeoDataFrames importable by duckdb
         nodes = nodes_df.to_arrow()
         edges_df = edges_df.reset_index()
@@ -248,7 +282,7 @@ class Database:
                 SELECT u, v, key, length, ST_GeomFromText(geometry), oneway
                 FROM edges
             """)
-        
+
     def obtain_features(self, amenity=True, public_transport=True):
         """
         ### Expected:
@@ -272,8 +306,8 @@ class Database:
             return
 
         # Get features GeoDataFrame from OSMnx
-        features_gdf = get_features(self.city, amenity, public_transport)
-        
+        features_gdf = self.network.get_features(amenity, public_transport)
+
         # Make features importable in duckdb
         features_arrow = features_gdf.to_arrow()
         self.conn.register("features_arrow", features_arrow)
@@ -296,14 +330,14 @@ class Database:
                     highway
                 FROM features_arrow
             """)
-    
+
     def pre_process(self):
         """
         ### Expected:
             - City set (set_city())
             - Network loaded (load_network())
             - Features loaded (load_features) (optional):\n
-                features not loaded, will result in NULL values in Neighborhood::Amenity_density 
+                features not loaded, will result in NULL values in Neighborhood::Amenity_density
         ### Parameters:
             - city:\n
                 The city to do the pre_processing for.
@@ -315,13 +349,13 @@ class Database:
         """
         # Remove all entries from neighborhood
         self.conn.sql("DELETE FROM Neighborhood")
-        
+
         # Obtain number of amenities
         num_amenities = "(SELECT count(public_transport) FROM Features WHERE public_transport IS NOT NULL)"
 
         self.conn.sql(f"""
                 INSERT INTO Neighborhood
-                SELECT 
+                SELECT
                     id,
                     regio,
                     pop / area,
@@ -345,6 +379,7 @@ class Database:
                     low_income / area,
                     high_income / area,
                     risk_poverty / area,
+                    geom
                 FROM (SELECT *, ST_Area(geom) as area
                       FROM CBS
                       WHERE gm_naam='{self.city}' AND recs='Buurt')
@@ -359,18 +394,31 @@ class Database:
                 WHERE ST_Within(g.loc, z.geom)
             """)
 
+    def create_pts_per_neighborhood(self):
+        """
+        ### Expected:
+            - Pre-processing run
+        ### Parameters:
+            - None
+        ### Returns:
+            - None
+        ### Side-effects:
+            - (Re)create Neighborhood_pts table
+        ### Notes'
+            - Uses algorithm from configuration to obtain point locations
+        """
+        
 
-class Network:
-    def __init__(self, city: str, store_in_file=False, store_path='network_cache/') -> None:
-        """
-            Get OSMnx network of city.
-            If store_in_file=True, writes a copy of the original imported network to a store_path.
-            If such a copy exists, initialization will use this copy instead of the OSMnx api.
-        """
-        if os.path.isfile(f"{store_path}{city}.graphml"):
-            self.graph = ox.io.load_graphml(f"{store_path}{city}.graphml")
-        else:
-            self.graph = get_graph(city)
-            if store_in_file:
-                ox.io.save_graphml(self.graph, f"{store_path}{city}.graphml")
+
+    def remove_f_edges(self, use_population=True, use_amenity=False):
+        pass
+
+    def move_transit(self):
+        pass
+
+    def get_neighborhood_dist_to_nearest_transit(self):
+        pass
+
+    def get_colored_network(self):
+        pass
 

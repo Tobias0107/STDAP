@@ -26,18 +26,18 @@ class TestDatabase:
         assert len(database.get_cities()) == 342
 
     def test_load_network(self):
-        database.load_network(network.graph)
+        database.load_network(network)
 
     def test_pre_process(self):
         database.set_city("Amsterdam")
-        database.load_network(network.graph)
+        database.load_network(network)
         database.pre_process()
 
     def test_obtain_features(self):
         database.set_city("Amsterdam")
-        database.load_network(network.graph)
+        database.load_network(network)
         database.obtain_features()
-    
+
     def test_show_database(self):
         database.to_csv()
 
