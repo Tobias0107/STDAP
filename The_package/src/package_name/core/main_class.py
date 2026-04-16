@@ -4,7 +4,7 @@
 
     This class is mostly used as a header file, as well as for defining what
     functions should be public. All functionality should therefore be moved
-    to different modules in the package (utils or core) 
+    to different modules in the package (utils or core)
 """
 
 
@@ -19,7 +19,7 @@ from package_name.exceptions import Initializing_error
 # Import Simulations from core
 import package_name.core._simulation_transit_distance as Sim_trans_dist
 
-# Import helper functions from utils 
+# Import helper functions from utils
 # none yet
 
 
@@ -27,8 +27,8 @@ class simulator:
     """
         This is the main class that will act as a linking class allowing access to
         all methods important for simulating.
-    """    
-    
+    """
+
     def __init__(self, csv: str, geopackage:str) -> None:
         """ Initializes new instance of the simulator for the given datasets """
         self.database = Database(csv, geopackage)
@@ -41,7 +41,7 @@ class simulator:
     def choose_city(self, city: str):
         """
             Tells the simulator what city to research.
-            Should be called at least one before running a simulation.    
+            Should be called at least one before running a simulation.
         """
         self.network = Network(city)
         self.database.set_city(city)
@@ -89,7 +89,7 @@ class simulator:
                     a long time this is highly recommended.
                 - print_simulation_steps: \n
                     If True: Prints the current simulation step to stdout. This can provide for more
-                    insight in the simulation progress. 
+                    insight in the simulation progress.
                 - saving_dir: \n
                     The directory to save the results (if any).
             ### Returns:

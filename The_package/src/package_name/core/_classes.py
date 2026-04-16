@@ -8,27 +8,40 @@ import duckdb as db
 import osmnx as ox
 import networkx as nx
 import os
+import geopandas as gpd
 
 # Importing helper functions from utils
 from package_name.utils.util_OSMnx import get_graph, get_features
 
 
 class Network:
-    def __init__(self, city: str, store_in_file=False, store_path='network_cache/') -> None:
+    def __init__(self, city: str, store_in_file=False, store_dir='network_cache/') -> None:
         """
             Get OSMnx network of city.
             If store_in_file=True, writes a copy of the original imported network to a store_path.
             If such a copy exists, initialization will use this copy instead of the OSMnx api.
         """
-        if os.path.isfile(f"{store_path}{city}.graphml"):
-            self.graph = ox.io.load_graphml(f"{store_path}{city}.graphml")
+        self.store_in_file = store_in_file
+        self.path = f"{store_dir}{city}"
+        self.city = city
+        if os.path.isfile(f"{self.path}.graphml"):
+            self.graph = ox.io.load_graphml(f"{self.path}.graphml")
         else:
             self.graph = get_graph(city)
             if store_in_file:
-                ox.io.save_graphml(self.graph, f"{store_path}{city}.graphml")
-    
+                ox.io.save_graphml(self.graph, f"{self.path}.graphml")
+
     def get_nodes_and_edges(self):
         return ox.convert.graph_to_gdfs(self.graph)
+
+    def get_features(self, amenity=True, public_transport=True):
+        if os.path.isfile(f"{self.path}.parquet"):
+            self.features = gpd.read_parquet(f"{self.path}.parquet")
+        else:
+            self.features = get_features(self.city, amenity, public_transport)
+            if self.store_in_file:
+                self.features.to_parquet(f"{self.path}.parquet")
+        return self.features
 
 
 class Database:
@@ -204,7 +217,7 @@ class Database:
         ### Parameters:
             - None
         ### Returns:
-            - List of cities (local autoritjes) in the CBS datasets 
+            - List of cities (local autoritjes) in the CBS datasets
         ### Side-effects:
             - None
         """
@@ -214,7 +227,7 @@ class Database:
             """
         res = self.conn.sql(query).fetchnumpy()
         return res["gm_naam"].tolist()
-    
+
     def set_city(self, city: str):
         """
         ### Expected:
@@ -223,7 +236,7 @@ class Database:
             - city:\n
                 The city to perform the simulation on
         ### Returns:
-            - None 
+            - None
         ### Side-effects:
             - Remembers city (needed for later methods)
         """
@@ -250,7 +263,7 @@ class Database:
 
         # Obtain data as GeoDataFrames (GeoPandas)
         nodes_df, edges_df = self.network.get_nodes_and_edges()
-        
+
         # Make GeoDataFrames importable by duckdb
         nodes = nodes_df.to_arrow()
         edges_df = edges_df.reset_index()
@@ -292,8 +305,8 @@ class Database:
             return
 
         # Get features GeoDataFrame from OSMnx
-        features_gdf = get_features(self.city, amenity, public_transport)
-        
+        features_gdf = self.network.get_features(amenity, public_transport)
+
         # Make features importable in duckdb
         features_arrow = features_gdf.to_arrow()
         self.conn.register("features_arrow", features_arrow)
@@ -316,14 +329,14 @@ class Database:
                     highway
                 FROM features_arrow
             """)
-    
+
     def pre_process(self):
         """
         ### Expected:
             - City set (set_city())
             - Network loaded (load_network())
             - Features loaded (load_features) (optional):\n
-                features not loaded, will result in NULL values in Neighborhood::Amenity_density 
+                features not loaded, will result in NULL values in Neighborhood::Amenity_density
         ### Parameters:
             - city:\n
                 The city to do the pre_processing for.
@@ -335,13 +348,13 @@ class Database:
         """
         # Remove all entries from neighborhood
         self.conn.sql("DELETE FROM Neighborhood")
-        
+
         # Obtain number of amenities
         num_amenities = "(SELECT count(public_transport) FROM Features WHERE public_transport IS NOT NULL)"
 
         self.conn.sql(f"""
                 INSERT INTO Neighborhood
-                SELECT 
+                SELECT
                     id,
                     regio,
                     pop / area,
@@ -378,7 +391,7 @@ class Database:
                 FROM {zones} z
                 WHERE ST_Within(g.loc, z.geom)
             """)
-    
+
     def create_pts_per_neighborhood(self):
         pass
 

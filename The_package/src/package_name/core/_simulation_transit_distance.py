@@ -2,7 +2,7 @@
     This file contains all functions related to the simulation of the transit
     distance after removing <fraction> edges.
 """
-# Imports 
+# Imports
 from _classes import Database, Network
 
 
@@ -50,17 +50,17 @@ def run_simulation(network:Network, database:Database, f: float,
                 a long time this is highly recommended.
             - print_simulation_steps: \n
                 If True: Prints the current simulation step to stdout. This can provide for more
-                insight in the simulation progress. 
+                insight in the simulation progress.
             - saving_dir: \n
                 The directory to save the results (if any).
-            
+
         ### Returns:
             - The average results aper demographic group in the form of a dictionary
         ### Side effects:
             - Removes edges from network
             - Adds tables to database
     """
-    
-    
+
+
 
 
