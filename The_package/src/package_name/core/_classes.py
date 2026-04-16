@@ -13,6 +13,24 @@ import os
 from package_name.utils.util_OSMnx import get_graph, get_features
 
 
+class Network:
+    def __init__(self, city: str, store_in_file=False, store_path='network_cache/') -> None:
+        """
+            Get OSMnx network of city.
+            If store_in_file=True, writes a copy of the original imported network to a store_path.
+            If such a copy exists, initialization will use this copy instead of the OSMnx api.
+        """
+        if os.path.isfile(f"{store_path}{city}.graphml"):
+            self.graph = ox.io.load_graphml(f"{store_path}{city}.graphml")
+        else:
+            self.graph = get_graph(city)
+            if store_in_file:
+                ox.io.save_graphml(self.graph, f"{store_path}{city}.graphml")
+    
+    def get_nodes_and_edges(self):
+        return ox.convert.graph_to_gdfs(self.graph)
+
+
 class Database:
     def __init__(self, csv: str, geopackage: str) -> None:
         """
@@ -210,26 +228,28 @@ class Database:
             - Remembers city (needed for later methods)
         """
         self.city = city
-    
-    def load_network(self, OSMnx_graph: nx.MultiDiGraph):
+
+    def load_network(self, network: Network):
         """
         ### Expected:
             - None
         ### Parameters:
-            - OSMnx_graph:\n
-                An OSMnx Multigraph containing the network of a single city
+            - Network:\n
+                An instance of the Network class containing the network of a single city
         ### Returns:
             - None
         ### Side-effects:
             - (Re)create Graph_nodes Table
             - (Re)create Graph_edges Table
         """
+        self.network = network
+
         # Remove all previous data from tables
         self.conn.sql("DELETE FROM Graph_nodes")
         self.conn.sql("DELETE FROM Graph_edges")
 
         # Obtain data as GeoDataFrames (GeoPandas)
-        nodes_df, edges_df = ox.convert.graph_to_gdfs(OSMnx_graph)
+        nodes_df, edges_df = self.network.get_nodes_and_edges()
         
         # Make GeoDataFrames importable by duckdb
         nodes = nodes_df.to_arrow()
@@ -248,7 +268,7 @@ class Database:
                 SELECT u, v, key, length, ST_GeomFromText(geometry), oneway
                 FROM edges
             """)
-        
+
     def obtain_features(self, amenity=True, public_transport=True):
         """
         ### Expected:
@@ -358,19 +378,19 @@ class Database:
                 FROM {zones} z
                 WHERE ST_Within(g.loc, z.geom)
             """)
+    
+    def create_pts_per_neighborhood(self):
+        pass
 
+    def remove_f_edges(self, use_population=True, use_amenity=False):
+        pass
 
-class Network:
-    def __init__(self, city: str, store_in_file=False, store_path='network_cache/') -> None:
-        """
-            Get OSMnx network of city.
-            If store_in_file=True, writes a copy of the original imported network to a store_path.
-            If such a copy exists, initialization will use this copy instead of the OSMnx api.
-        """
-        if os.path.isfile(f"{store_path}{city}.graphml"):
-            self.graph = ox.io.load_graphml(f"{store_path}{city}.graphml")
-        else:
-            self.graph = get_graph(city)
-            if store_in_file:
-                ox.io.save_graphml(self.graph, f"{store_path}{city}.graphml")
+    def move_transit(self):
+        pass
+
+    def get_neighborhood_dist_to_nearest_transit(self):
+        pass
+
+    def get_colored_network(self):
+        pass
 

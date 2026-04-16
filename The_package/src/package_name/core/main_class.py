@@ -44,25 +44,65 @@ class simulator:
             Should be called at least one before running a simulation.    
         """
         self.network = Network(city)
+        self.database.set_city(city)
 
-    def Simulate_transit_dist_on_trans(self, fraction: float,
-                                       demographic_groups: list[str],
-                                       visual_options):
+    def Simulate_transit_dist_on_trans(self, fraction: float, *,
+                   gender=True, age=True, ethnicity=True, SES=True,
+                   save_old_network=True, save_new_network=True,
+                   color_new_network=True, save_bar_diagram=True,
+                   print_progress=True, saving_dir="results_sim_transit_dist/"):
         """
-            ### Input:
-            fraction: \n
-                The fraction of car-accessible streets to transform to pedestrian area.
-            demographic_groups: \n
-                A list of demographic groups to take into account during simulation.
-            visual_options: \n
-                The visual options (split into more parameters later)
-            
-            ### Simulation:
-            <Here a description of the exact simulation>
+            ### Description:
+                <Here a short description of the simulation>
+            ### Expects:
+                - load_city method called previously
+            ### Parameters:
+                - network (Network)
+                - database (Database)
+                - f (float)\n
+                    fraction of the car-accessible streets to transform to pedestrian
+                - gender: \n
+                    If True: displays simulation results for gender
+                - age: \n
+                    If True: displays simulation results for age
+                - ethnicity: \n
+                    If True: displays simulation results for ethnicity
+                - SES: \n
+                    If True: displays simulation results for Social Economic Status (SES)
+                - Save_old_network: \n
+                    If True: saves the network pre-transformation in png format
+                - Save_new_network: \n
+                    If True: saves the network after transformation in png format
+                - color_new_network: \n
+                    If True: gives colors to neighborhoods in the network based on the
+                    average calculated new distance one has to travel to transit.
+                    Red = Big increase (relative to other neighborhoods)
+                    Orange = Small increase (relative to other neighborhoods)
+                    Yellow = Practically remains the same
+                    Light green = Distance is slightly decreased
+                    Dark green = Distance is greatly decreased
+                - save_bar_diagram: \n
+                    If True: Saves the average results per demographic group in the form of a bar
+                    diagram (png).
+                - print_progress: \n
+                    If True: Prints the progress of the simulation to stdout. As simulations can take
+                    a long time this is highly recommended.
+                - print_simulation_steps: \n
+                    If True: Prints the current simulation step to stdout. This can provide for more
+                    insight in the simulation progress. 
+                - saving_dir: \n
+                    The directory to save the results (if any).
+            ### Returns:
+                - The average results aper demographic group in the form of a dictionary
         """
         if (self.network == None):
             raise Initializing_error("City not yet initialized. Before running" \
             "this simulation, call 'choose_city' first. For details, see manual.")
-        
+
         return Sim_trans_dist.run_simulation(self.network, self.database, fraction,
-                                             demographic_groups, visual_options)
+                                             gender, age, ethnicity, SES,
+                                             save_old_network, save_new_network,
+                                             color_new_network, save_bar_diagram,
+                                             print_progress, saving_dir="results_sim_transit_dist/")
+
+
