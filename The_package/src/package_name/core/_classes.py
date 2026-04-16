@@ -127,6 +127,7 @@ class Database:
                 low_income_density FLOAT,
                 high_income_density FLOAT,
                 risk_poverty_density FLOAT,
+                geometry GEOMETRY
             );
             CREATE TABLE Graph_nodes (
                 id BIGINT PRIMARY KEY,
@@ -378,6 +379,7 @@ class Database:
                     low_income / area,
                     high_income / area,
                     risk_poverty / area,
+                    geom
                 FROM (SELECT *, ST_Area(geom) as area
                       FROM CBS
                       WHERE gm_naam='{self.city}' AND recs='Buurt')
@@ -393,7 +395,20 @@ class Database:
             """)
 
     def create_pts_per_neighborhood(self):
-        pass
+        """
+        ### Expected:
+            - Pre-processing run
+        ### Parameters:
+            - None
+        ### Returns:
+            - None
+        ### Side-effects:
+            - (Re)create Neighborhood_pts table
+        ### Notes'
+            - Uses algorithm from configuration to obtain point locations
+        """
+        
+
 
     def remove_f_edges(self, use_population=True, use_amenity=False):
         pass
