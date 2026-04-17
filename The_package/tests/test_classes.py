@@ -8,7 +8,6 @@
     Run from The_package as root: pytest --durations=0 -s --verbose
 """
 
-import pytest
 from package_name.core._classes import Database, Network
 
 

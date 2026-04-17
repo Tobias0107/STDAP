@@ -10,3 +10,5 @@ pyarrow # Used for conversion between geopandas to duckdb
 
 pytest # Used for testing
 
+scipy # Used for default functions
+

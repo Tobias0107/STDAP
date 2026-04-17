@@ -1,18 +1,14 @@
 """
-    Here the test for the utils.
-    Some tests are commented out to save time when testing. 
+    This file contains the pytests for the utils
 """
 
-import pytest
 from package_name.utils.util_OSMnx import get_graph, get_features
 
 class TestUtilsOSMnx:
     def test_get_graph(self):
-        # G = get_graph("Groningen")
-        pass
+        G = get_graph("Groningen")
 
     def test_get_features(self):
         gdf = get_features("Groningen")
-        gdf.to_csv("tmp.csv")
 
 
