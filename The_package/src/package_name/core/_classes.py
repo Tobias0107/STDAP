@@ -28,6 +28,10 @@ class Network:
         self.store_in_file = store_in_file
         self.path = f"{store_dir}{city}"
         self.city = city
+        self.r5_network = None
+        self.osm_pbf_path = None
+        self.gtfs_files = None
+
         if os.path.isfile(f"{self.path}.graphml"):
             self.graph = ox.io.load_graphml(f"{self.path}.graphml")
         else:
@@ -47,6 +51,26 @@ class Network:
                 self.features.to_parquet(f"{self.path}.parquet")
         return self.features
 
+    def build_r5_network(self, osm_pbf_path: str, gtfs_files: list):
+        """
+        Builds an r5py TransportNetwork using OSM + GTFS.
+        """
+        if self.r5_network is not None:
+            return  self.r5_network  # al gebouwd
+
+        from r5py import TransportNetwork
+
+        self.osm_pbf_path = osm_pbf_path
+        self.gtfs_files = gtfs_files
+
+        self.r5_network = TransportNetwork(osm_pbf_path, gtfs_files)
+
+        return self.r5_network
+
+    def get_r5_network(self):
+        if self.r5_network is None:
+            raise ValueError("r5 network not initialized. Call build_r5_network() first.")
+        return self.r5_network
 
 class Database:
     def __init__(self, csv: str, geopackage: str) -> None:

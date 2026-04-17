@@ -45,3 +45,15 @@ class TestNetwork:
     def test_load_neighborhoods(self):
         pass
 
+    def test_r5_network_initially_none(self):
+        net = Network("Amsterdam")
+        assert net.r5_network is None
+
+    def test_build_r5_network(self):
+        net = Network("Amsterdam")
+
+        net.build_r5_network(osm_pbf_path="tests/TestDatasets/test.osm.pbf",  gtfs_files=["tests/TestDatasets/test_gtfs.zip"])
+
+        assert net.r5_network is not None
+        
+
