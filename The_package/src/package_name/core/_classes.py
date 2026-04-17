@@ -13,6 +13,10 @@ import geopandas as gpd
 # Importing helper functions from utils
 from package_name.utils.util_OSMnx import get_graph, get_features
 
+# Importing configuration settings
+from package_name.config.settings import get_settings
+settings = get_settings()
+
 
 class Network:
     def __init__(self, city: str, store_in_file=False, store_dir='network_cache/') -> None:
@@ -407,7 +411,16 @@ class Database:
         ### Notes'
             - Uses algorithm from configuration to obtain point locations
         """
-        
+        # Export bounding box to pandas dataframe
+        self.conn.sql("""
+            SELECT id, ST_XMin(geometry) as min_x, ST_XMax(geometry) as max_x,
+                      ST_YMin(geometry) as min_y, ST_YMax(geometry) as max_y
+            FROM 
+            """)
+
+        # Apply distribution to obtain list of points per neighborhood
+
+        # Import the dataframe into duckdb, and insert into Neighborhoods_pts
 
 
     def remove_f_edges(self, use_population=True, use_amenity=False):
