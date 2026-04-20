@@ -33,9 +33,21 @@ class Settings:
     )
     one_way_worth: float = field(
         default=0.7,
-        metadata={"description": "The worth of a one way street, as compared to"
-                  "two way streets. The parameter is used for simulations that remove"
-                  "streets from driving networks."}
+        metadata={"description": "The worth of a one way street, as compared to"\
+                  "two way streets. The parameter is used for simulations that remove"\
+                  "streets from driving networks. Setting this to zero would fully prioritize"\
+                  "removing 2-way streets before 1-way streets"}
+    )
+    transit_min_edges: int = field(
+        default=2,
+        metadata={"description": "This field determines when the simulation treats"\
+                  "an bus/tram station as isolated. When the node of the transit station"\
+                  "contains strictly less then transit_min_edges, it is treated as isolated."}
+    )
+    transit_max_edge_dist: int = field(
+        default=30,
+        metadata={"description": "This field determined the maximum distance in meters"\
+                  "between a transit node, and the nearest edge."}
     )
 
 

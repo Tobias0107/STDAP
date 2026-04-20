@@ -555,7 +555,30 @@ class Database:
         """)
 
     def move_transit(self):
-        pass
+        """
+        ### Description
+            Moves Bus and Tram stations that are isolated from the driving network.
+            Busses and Trams are isolated if the roads where they are located on,
+            have less edges than the minimum edges that is set in settings.py
+            (transit_min_edges). Default = 2.
+            As transit stops are not nessisarily connected to the street network, transit
+            is mapped to the nearest edge in the network. Here the maximum distance between
+            a transit and an edge before the transit is ignored can be set in settings.py
+            (transit_max_edge_dist). Default = 30. (In meters)
+        ### Expected:
+            - Pre-process done (pre_process called)
+        ### Parameters:
+            - None
+        ### Returns:
+            - Boolean:\n
+                True: Some changes made
+                False: No changes made
+        ### Side_effects;
+            - Updates Features table with new, moved transit
+        """
+        # Get transit bus/tram having less edges than the minimum.
+        min_edges = settings.transit_min_edges
+
 
     def get_neighborhood_dist_to_nearest_transit(self):
         pass
