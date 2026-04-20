@@ -366,7 +366,7 @@ class Database:
         ### Expected:
             - City set (set_city())
             - Network loaded (load_network())
-            - Features loaded (load_features) (optional):\n
+            - Features loaded (obtain_features) (optional):\n
                 features not loaded, will result in NULL values in Neighborhoods::Amenity_density
         ### Parameters:
             - city:\n
@@ -380,16 +380,13 @@ class Database:
         # Remove all entries from neighborhood
         self.conn.sql("DELETE FROM Neighborhoods")
 
-        # Obtain number of amenities
-        num_amenities = "(SELECT count(public_transport) FROM Features WHERE public_transport IS NOT NULL)"
-
         self.conn.sql(f"""
                 INSERT INTO Neighborhoods
                 SELECT
                     id,
                     regio,
                     pop / area,
-                    {num_amenities} / area,
+                    NULL,
                     male / area,
                     female / area,
                     age_00_14 / area,
@@ -413,6 +410,16 @@ class Database:
                 FROM (SELECT *, ST_Area(geom) as area
                       FROM CBS
                       WHERE gm_naam='{self.city}' AND recs='Buurt')
+            """)
+
+        # Add amenity density
+        self.conn.sql(f"""
+            UPDATE Neighborhoods
+            SET amenity_density=count(*)
+            FROM Features f
+            JOIN CBS c
+            ON ST_Within(f.loc, c.geom)
+            WHERE f.public_transport IS NULL AND c.gm_naam='{self.city}' AND c.recs='Buurt'
             """)
 
         # Per node, determine the neighborhood

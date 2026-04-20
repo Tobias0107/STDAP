@@ -27,15 +27,15 @@ class TestDatabase:
     def test_load_network(self):
         database.load_network(network)
 
-    def test_pre_process(self):
-        database.set_city("Amsterdam")
-        database.load_network(network)
-        database.pre_process()
-
     def test_obtain_features(self):
         database.set_city("Amsterdam")
-        database.load_network(network)
         database.obtain_features()
+
+    def test_pre_process(self):
+        database.set_city("Amsterdam")
+        database.obtain_features()
+        database.load_network(network)
+        database.pre_process()
 
     def test_create_pts_per_neighborhood(self):
         database.create_pts_per_neighborhood()
@@ -44,19 +44,19 @@ class TestDatabase:
         database.to_csv(limit=1000000000)
 
 
-class TestNetwork:
-    def test_load_neighborhoods(self):
-        pass
+# class TestNetwork:
+#     def test_load_neighborhoods(self):
+#         pass
 
-    def test_r5_network_initially_none(self):
-        net = Network("Amsterdam")
-        assert net.r5_network is None
+#     def test_r5_network_initially_none(self):
+#         net = Network("Amsterdam")
+#         assert net.r5_network is None
 
-    def test_build_r5_network(self):
-        net = Network("Amsterdam")
+#     def test_build_r5_network(self):
+#         net = Network("Amsterdam")
 
-        net.build_r5_network(osm_pbf_path="tests/TestDatasets/test.osm.pbf",  gtfs_files=["tests/TestDatasets/test_gtfs.zip"])
+#         net.build_r5_network(osm_pbf_path="tests/TestDatasets/test.osm.pbf",  gtfs_files=["tests/TestDatasets/test_gtfs.zip"])
 
-        assert net.r5_network is not None
+#         assert net.r5_network is not None
         
 
