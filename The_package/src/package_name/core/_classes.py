@@ -19,6 +19,9 @@ from package_name.utils.util_OSMnx import get_graph, get_features
 from package_name.config.settings import get_settings
 settings = get_settings()
 
+# Importing exceptions
+from package_name.exceptions import Initializing_error
+
 
 class Network:
     def __init__(self, city: str, store_in_file=False, store_dir='network_cache/') -> None:
@@ -512,6 +515,12 @@ class Database:
             - Removes edges from graph network
         """
         one_way_worth = settings.one_way_worth
+        if not (use_population ^ use_amenity):
+            raise ValueError("use_population and use_amenity can't be both true or both false")
+        elif use_population:
+            density = "n.pop_density"
+        else:
+            density = "n.amenity_density"
 
         # Get id of edges to be removed.
         tot_len = "(SELECT sum(length) from Graph_edges)"
@@ -525,8 +534,8 @@ class Database:
                 ON e.neighborhood_id = n.id
                 QUALIFY sum(e.length)
                     OVER (ORDER BY (CASE WHEN e.oneway
-                                        THEN (n.pop_density / e.length * {one_way_worth})
-                                        ELSE (n.pop_density / e.length) END ) DESC )
+                                        THEN ({density} / e.length * {one_way_worth})
+                                        ELSE ({density} / e.length) END ) DESC )
                     <=  ({fraction} * {tot_len}) ) sub
             WHERE sub.removed = 'false'
         """)

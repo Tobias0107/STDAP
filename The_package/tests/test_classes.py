@@ -41,7 +41,7 @@ class TestDatabase:
         database.create_pts_per_neighborhood()
 
     def test_remove_f_edges(self):
-        database.remove_f_edges(0.2)
+        database.remove_f_edges(0.2, use_population=False, use_amenity=True)
 
     def test_show_database(self):
         database.to_csv(limit=1000000000)
