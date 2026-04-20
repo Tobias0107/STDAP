@@ -421,11 +421,34 @@ class Database:
             FROM Neighborhoods
             """).df()
 
+        # For every bounding box, calculate the points
+        ids = []
+        xs = []
+        ys = []
+        for row in df.itertuples():
+            pts = settings.neighborhood_distribution(row.lower_x, # type: ignore
+                                                     row.upper_x, # type: ignore
+                                                     row.lower_y, # type: ignore
+                                                     row.upper_y) # type: ignore
+            if pts.size == 0:
+                continue
+            ids.extend([row.id] * (int)(pts.size/2))
+            xs.extend(pts[:, 0])
+            ys.extend(pts[:, 1])
+
+        Neighborhood_pts_df = pd.DataFrame({
+            "ids":ids,
+            "xs":xs,
+            "ys":ys
+        })
+
         # Import dataframe to duckdb
         self.conn.sql("""
             INSERT INTO Neighborhood_pts (neighborhood_id, pt)
-            SELECT ids, ST_Point(xs, ys)
-            FROM Neighborhood_pts_df
+            SELECT pt.ids, ST_Point(pt.xs, pt.ys)
+            FROM Neighborhood_pts_df pt
+            JOIN Neighborhoods n
+            ON pt.ids = n.id AND ST_Within(ST_Point(pt.xs, pt.ys), n.geometry)
             """)
 
 
