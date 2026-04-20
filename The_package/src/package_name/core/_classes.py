@@ -170,8 +170,9 @@ class Database:
                 v BIGINT,
                 key INTEGER,
                 length FLOAT NOT NULL,
+                oneway BOOLEAN NOT NULL,
+                removed BOOLEAN NOT NULL,
                 geometry GEOMETRY NOT NULL,
-                oneway BOOLEAN,
                 PRIMARY KEY (u, v, key)
             );
             CREATE TABLE Neighborhood_pts (
@@ -308,8 +309,8 @@ class Database:
                 FROM nodes
             """)
         self.conn.sql("""
-                INSERT INTO Graph_edges (u, v, key, length, geometry, oneway)
-                SELECT u, v, key, length, ST_GeomFromText(geometry), oneway
+                INSERT INTO Graph_edges (u, v, key, length, oneway, removed, geometry)
+                SELECT u, v, key, length, oneway, false, ST_GeomFromText(geometry)
                 FROM edges
             """)
 
@@ -482,22 +483,27 @@ class Database:
 
     def remove_f_edges(self, fraction: float, use_population=True, use_amenity=False):
         """
+        ### Description:
+            Will sort the edges based on population or amenity density.
+            Will then remove edges until desired fraction is reached.
+            Meaning successive removals will built upon the previous removals.
         ### Expected:
             - Created points per neighborhood (create_pts_per_neighborhood() run)
         ### Parameters:
             - fraction\n
                 The fraction of the edges to remove from the network.
             - use_population\n
-                If True: Removes edges based on population nearby
+                If True: Removes edges based on population nearby ((pop * length) / density)
             - use_amenity \n
-                If True: Removes edges based on amenity nearby
+                If True: Removes edges based on amenity nearby ((amen * length) / density)
         ### Returns:
             - None
         ### Side_effects;
-            - Updates Graph_edges table with removed tag (BOOLEAN)
+            - Updates Graph_edges table removed tag (BOOLEAN)
             - Removes edges from graph network
         """
         
+
         pass
 
     def move_transit(self):
