@@ -383,43 +383,40 @@ class Database:
         self.conn.sql(f"""
                 INSERT INTO Neighborhoods
                 SELECT
-                    id,
-                    regio,
-                    pop / area,
-                    NULL,
-                    male / area,
-                    female / area,
-                    age_00_14 / area,
-                    age_15_24 / area,
-                    age_25_44 / area,
-                    age_45_64 / area,
-                    age_65_oo / area,
-                    background_nl / area,
-                    background_eu / area,
-                    background_neu / area,
-                    birthplace_nl / area,
-                    birthplace_eu / area,
-                    birthplace_neu / area,
-                    low_education / area,
-                    medium_education / area,
-                    high_education / area,
-                    low_income / area,
-                    high_income / area,
-                    risk_poverty / area,
-                    geom
+                    c.id,
+                    c.regio,
+                    c.pop / area,
+                    coalesce(a.count, 0) / area,
+                    c.male / area,
+                    c.female / area,
+                    c.age_00_14 / area,
+                    c.age_15_24 / area,
+                    c.age_25_44 / area,
+                    c.age_45_64 / area,
+                    c.age_65_oo / area,
+                    c.background_nl / area,
+                    c.background_eu / area,
+                    c.background_neu / area,
+                    c.birthplace_nl / area,
+                    c.birthplace_eu / area,
+                    c.birthplace_neu / area,
+                    c.low_education / area,
+                    c.medium_education / area,
+                    c.high_education / area,
+                    c.low_income / area,
+                    c.high_income / area,
+                    c.risk_poverty / area,
+                    c.geom
                 FROM (SELECT *, ST_Area(geom) as area
                       FROM CBS
-                      WHERE gm_naam='{self.city}' AND recs='Buurt')
-            """)
-
-        # Add amenity density
-        self.conn.sql(f"""
-            UPDATE Neighborhoods
-            SET amenity_density=count(*)
-            FROM Features f
-            JOIN CBS c
-            ON ST_Within(f.loc, c.geom)
-            WHERE f.public_transport IS NULL AND c.gm_naam='{self.city}' AND c.recs='Buurt'
+                      WHERE gm_naam='{self.city}' AND recs='Buurt') c
+                LEFT JOIN (SELECT c2.id, count(*) as count
+                           FROM features f
+                           JOIN CBS c2
+                           ON ST_Within(f.loc, c2.geom)
+                           WHERE gm_naam='{self.city}' AND recs='Buurt' AND public_transport IS NULL
+                           GROUP BY c2.id ) a
+                ON c.id = a.id
             """)
 
         # Per node, determine the neighborhood
