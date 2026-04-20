@@ -6,9 +6,11 @@
 # Importing packages
 import duckdb as db
 import osmnx as ox
-import networkx as nx
 import os
+import pandas as pd
+import numpy as np
 import geopandas as gpd
+
 
 # Importing helper functions from utils
 from package_name.utils.util_OSMnx import get_graph, get_features
@@ -131,7 +133,7 @@ class Database:
                 risk_poverty UBIGINT,
                 geom GEOMETRY
             );
-            CREATE TABLE Neighborhood (
+            CREATE TABLE Neighborhoods (
                 id VARCHAR PRIMARY KEY,
                 regio VARCHAR,
                 pop_density FLOAT,
@@ -233,7 +235,7 @@ class Database:
     def to_csv(self, limit=10):
         """ Convert every table in database to a csv with given limit. For debugging purposes only. """
         self.conn.sql(f"SELECT * FROM CBS LIMIT {limit}").to_csv("CBS_database_preview.csv")
-        self.conn.sql(f"SELECT * FROM Neighborhood LIMIT {limit}").to_csv("Neighborhood_database_preview.csv")
+        self.conn.sql(f"SELECT * FROM Neighborhoods LIMIT {limit}").to_csv("Neighborhoods_database_preview.csv")
         self.conn.sql(f"SELECT * FROM Graph_nodes LIMIT {limit}").to_csv("Graph_nodes_database_preview.csv")
         self.conn.sql(f"SELECT * FROM Graph_edges LIMIT {limit}").to_csv("Graph_edges_database_preview.csv")
         self.conn.sql(f"SELECT * FROM Neighborhood_pts LIMIT {limit}").to_csv("Neighborhood_pts_database_preview.csv")
@@ -365,24 +367,24 @@ class Database:
             - City set (set_city())
             - Network loaded (load_network())
             - Features loaded (load_features) (optional):\n
-                features not loaded, will result in NULL values in Neighborhood::Amenity_density
+                features not loaded, will result in NULL values in Neighborhoods::Amenity_density
         ### Parameters:
             - city:\n
                 The city to do the pre_processing for.
         ### Returns:
             - None
         ### Side-effects:
-            - Replace entries Neighborhood with entries new city pre-processed from CBS and Amenities
-            - Determine neighborhood for every node in Graph_nodes
+            - Replace entries Neighborhoods with entries new city pre-processed from CBS and Amenities
+            - Determine neighborhoods for every node in Graph_nodes
         """
         # Remove all entries from neighborhood
-        self.conn.sql("DELETE FROM Neighborhood")
+        self.conn.sql("DELETE FROM Neighborhoods")
 
         # Obtain number of amenities
         num_amenities = "(SELECT count(public_transport) FROM Features WHERE public_transport IS NOT NULL)"
 
         self.conn.sql(f"""
-                INSERT INTO Neighborhood
+                INSERT INTO Neighborhoods
                 SELECT
                     id,
                     regio,
@@ -434,17 +436,44 @@ class Database:
             - (Re)create Neighborhood_pts table
         ### Notes'
             - Uses algorithm from configuration to obtain point locations
+            - Done in parallel for extra speed
         """
-        # Export bounding box to pandas dataframe
+        # Obtain bounding box as dataframe:
+        df = self.conn.sql("""
+            SELECT id, ST_XMin(geometry) as lower_x, ST_XMax(geometry) as upper_x,
+                      ST_YMin(geometry) as lower_y, ST_YMax(geometry) as upper_y
+            FROM Neighborhoods
+            """).df()
+
+        # For every bounding box, calculate the points
+        ids = []
+        xs = []
+        ys = []
+        for row in df.itertuples():
+            pts = settings.neighborhood_distribution(row.lower_x, # type: ignore
+                                                     row.upper_x, # type: ignore
+                                                     row.lower_y, # type: ignore
+                                                     row.upper_y) # type: ignore
+            if pts.size == 0:
+                continue
+            ids.extend([row.id] * (int)(pts.size/2))
+            xs.extend(pts[:, 0])
+            ys.extend(pts[:, 1])
+
+        Neighborhood_pts_df = pd.DataFrame({
+            "ids":ids,
+            "xs":xs,
+            "ys":ys
+        })
+
+        # Import dataframe to duckdb
         self.conn.sql("""
-            SELECT id, ST_XMin(geometry) as min_x, ST_XMax(geometry) as max_x,
-                      ST_YMin(geometry) as min_y, ST_YMax(geometry) as max_y
-            FROM 
+            INSERT INTO Neighborhood_pts (neighborhood_id, pt)
+            SELECT pt.ids, ST_Point(pt.xs, pt.ys)
+            FROM Neighborhood_pts_df pt
+            JOIN Neighborhoods n
+            ON pt.ids = n.id AND ST_Within(ST_Point(pt.xs, pt.ys), n.geometry)
             """)
-
-        # Apply distribution to obtain list of points per neighborhood
-
-        # Import the dataframe into duckdb, and insert into Neighborhoods_pts
 
 
     def remove_f_edges(self, use_population=True, use_amenity=False):

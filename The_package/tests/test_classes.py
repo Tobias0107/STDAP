@@ -37,8 +37,11 @@ class TestDatabase:
         database.load_network(network)
         database.obtain_features()
 
+    def test_create_pts_per_neighborhood(self):
+        database.create_pts_per_neighborhood()
+
     def test_show_database(self):
-        database.to_csv()
+        database.to_csv(limit=1000000000)
 
 
 class TestNetwork:
