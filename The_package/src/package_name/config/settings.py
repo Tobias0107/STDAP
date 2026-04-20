@@ -31,6 +31,12 @@ class Settings:
                     "This function should return a numpy NDarray consisting of a list of points."\
                     "Points are lists of 2 elements in the form [x, y]"}
     )
+    one_way_worth: float = field(
+        default=0.7,
+        metadata={"description": "The worth of a one way street, as compared to"
+                  "two way streets. The parameter is used for simulations that remove"
+                  "streets from driving networks."}
+    )
 
 
 _settings = Settings()

@@ -53,6 +53,10 @@ class Network:
                 self.features.to_parquet(f"{self.path}.parquet")
         return self.features
 
+    def remove_edges(self, ebunch):
+        "Given a list of tuples (u, v) or (u, v, key). Removes the edges from the network"
+        self.graph.remove_edges_from(ebunch)
+
     def build_r5_network(self, osm_pbf_path: str, gtfs_files: list):
         """
         Builds an r5py TransportNetwork using OSM + GTFS.
@@ -173,6 +177,7 @@ class Database:
                 oneway BOOLEAN NOT NULL,
                 removed BOOLEAN NOT NULL,
                 geometry GEOMETRY NOT NULL,
+                neighborhood_id VARCHAR,
                 PRIMARY KEY (u, v, key)
             );
             CREATE TABLE Neighborhood_pts (
@@ -277,7 +282,7 @@ class Database:
     def load_network(self, network: Network):
         """
         ### Expected:
-            - None
+            - City set (set_city method)
         ### Parameters:
             - Network:\n
                 An instance of the Network class containing the network of a single city
@@ -302,16 +307,29 @@ class Database:
         edges_df["geometry"] = edges_df["geometry"].astype(str) # pyright: ignore[reportArgumentType]
         self.conn.register("edges", edges_df)
 
-        # Import GeoDataFrames into duckdb
-        self.conn.sql("""
-                INSERT INTO Graph_nodes (id, street_count, loc)
-                SELECT osmid, street_count, geometry
-                FROM nodes
+        # Import nodes into duckdb (pre-calculate the zone for each node)
+        self.conn.sql(f"""
+                INSERT INTO Graph_nodes (id, street_count, loc, neighborhood_id)
+                SELECT n.osmid, n.street_count, n.geometry, c.id
+                FROM nodes n
+                JOIN CBS c
+                ON ST_Within(n.geometry, c.geom)
+                WHERE recs='Buurt' AND gm_naam='{self.city}'
             """)
-        self.conn.sql("""
-                INSERT INTO Graph_edges (u, v, key, length, oneway, removed, geometry)
-                SELECT u, v, key, length, oneway, false, ST_GeomFromText(geometry)
-                FROM edges
+        # Import edges into duckdb (pre-calculate the zone for each edge)
+        self.conn.sql(f"""
+                INSERT INTO Graph_edges (u, v, key, length, oneway, removed, geometry, neighborhood_id)
+                SELECT u, v, key, length, oneway, false, ST_GeomFromText(geometry), c.id
+                FROM edges e
+                JOIN Graph_nodes n1
+                ON e.u = n1.id
+                JOIN Graph_nodes n2
+                ON e.v = n2.id
+                JOIN CBS c
+                ON ST_Within(ST_Point((ST_X(n1.loc) + ST_X(n2.loc)) / 2,
+                                      (ST_Y(n1.loc) + ST_Y(n2.loc)) / 2
+                             ), c.geom)
+                WHERE recs='Buurt' AND gm_naam='{self.city}'
             """)
 
     def obtain_features(self, amenity=True, public_transport=True):
@@ -420,15 +438,6 @@ class Database:
                 ON c.id = a.id
             """)
 
-        # Per node, determine the neighborhood
-        zones = f"(SELECT id, geom FROM CBS WHERE recs='Buurt' AND gm_naam='{self.city}')"
-        self.conn.sql(f"""
-                UPDATE Graph_nodes g
-                SET neighborhood_id = z.id
-                FROM {zones} z
-                WHERE ST_Within(g.loc, z.geom)
-            """)
-
     def create_pts_per_neighborhood(self):
         """
         ### Expected:
@@ -484,27 +493,57 @@ class Database:
     def remove_f_edges(self, fraction: float, use_population=True, use_amenity=False):
         """
         ### Description:
-            Will sort the edges based on population or amenity density.
-            Will then remove edges until desired fraction is reached.
+            Will sort the edges based on population or amenity density per meter street.
+            Will then remove edges until desired fraction of street-length is reached.
             Meaning successive removals will built upon the previous removals.
         ### Expected:
             - Created points per neighborhood (create_pts_per_neighborhood() run)
         ### Parameters:
             - fraction\n
-                The fraction of the edges to remove from the network.
+                The fraction of the total street length to remove from the network.
             - use_population\n
-                If True: Removes edges based on population nearby ((pop * length) / density)
+                If True: Removes edges based on population nearby ((pop (* one_way_worth if one way)) / (length * area))
             - use_amenity \n
-                If True: Removes edges based on amenity nearby ((amen * length) / density)
+                If True: Removes edges based on amenity nearby ((amen (* one_way_worth if one way)) / (length * area))
         ### Returns:
             - None
         ### Side_effects;
             - Updates Graph_edges table removed tag (BOOLEAN)
             - Removes edges from graph network
         """
-        
+        one_way_worth = settings.one_way_worth
 
-        pass
+        # Get id of edges to be removed.
+        tot_len = "(SELECT sum(length) from Graph_edges)"
+        self.conn.sql(f"""
+            CREATE OR REPLACE TEMP TABLE edges_to_remove AS
+            SELECT *
+            FROM (
+                SELECT e.*
+                FROM Graph_edges e
+                JOIN Neighborhoods n
+                ON e.neighborhood_id = n.id
+                QUALIFY sum(e.length)
+                    OVER (ORDER BY (CASE WHEN e.oneway
+                                        THEN (n.pop_density / e.length * {one_way_worth})
+                                        ELSE (n.pop_density / e.length) END ) DESC )
+                    <=  ({fraction} * {tot_len}) ) sub
+            WHERE sub.removed = 'false'
+        """)
+        # Remove edges from network
+        to_remove_df = self.conn.sql("SELECT u, v, key FROM edges_to_remove").df()
+        ebunch = list(to_remove_df.itertuples(index=False, name=None))
+        self.network.remove_edges(ebunch)
+
+        # Update the Graph_edges table with removed edges
+        self.conn.sql("""
+            UPDATE Graph_edges
+            SET removed = 'true'
+            FROM edges_to_remove
+            WHERE Graph_edges.u = edges_to_remove.u
+                      AND Graph_edges.u = edges_to_remove.u
+                      AND Graph_edges.key = edges_to_remove.key
+        """)
 
     def move_transit(self):
         pass

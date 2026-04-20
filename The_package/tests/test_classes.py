@@ -25,10 +25,10 @@ class TestDatabase:
         assert len(database.get_cities()) == 342
 
     def test_load_network(self):
+        database.set_city("Amsterdam")
         database.load_network(network)
 
     def test_obtain_features(self):
-        database.set_city("Amsterdam")
         database.obtain_features()
 
     def test_pre_process(self):
@@ -39,6 +39,9 @@ class TestDatabase:
 
     def test_create_pts_per_neighborhood(self):
         database.create_pts_per_neighborhood()
+
+    def test_remove_f_edges(self):
+        database.remove_f_edges(0.2)
 
     def test_show_database(self):
         database.to_csv(limit=1000000000)
