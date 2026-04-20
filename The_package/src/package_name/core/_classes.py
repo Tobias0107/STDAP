@@ -480,7 +480,24 @@ class Database:
             """)
 
 
-    def remove_f_edges(self, use_population=True, use_amenity=False):
+    def remove_f_edges(self, fraction: float, use_population=True, use_amenity=False):
+        """
+        ### Expected:
+            - Created points per neighborhood (create_pts_per_neighborhood() run)
+        ### Parameters:
+            - fraction\n
+                The fraction of the edges to remove from the network.
+            - use_population\n
+                If True: Removes edges based on population nearby
+            - use_amenity \n
+                If True: Removes edges based on amenity nearby
+        ### Returns:
+            - None
+        ### Side_effects;
+            - Updates Graph_edges table with removed tag (BOOLEAN)
+            - Removes edges from graph network
+        """
+        
         pass
 
     def move_transit(self):
