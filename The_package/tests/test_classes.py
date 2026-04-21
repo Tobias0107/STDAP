@@ -43,8 +43,11 @@ class TestDatabase:
     def test_remove_f_edges(self):
         database.remove_f_edges(0.2, use_population=False, use_amenity=True)
 
+    def test_move_transit_simple(self):
+        database.move_transit_simpel()
+
     def test_show_database(self):
-        database.to_csv(limit=1000000000)
+        database.to_csv(limit=100)
 
 
 # class TestNetwork:

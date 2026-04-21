@@ -38,16 +38,15 @@ class Settings:
                   "streets from driving networks. Setting this to zero would fully prioritize"\
                   "removing 2-way streets before 1-way streets"}
     )
-    transit_min_edges: int = field(
-        default=2,
-        metadata={"description": "This field determines when the simulation treats"\
-                  "an bus/tram station as isolated. When the node of the transit station"\
-                  "contains strictly less then transit_min_edges, it is treated as isolated."}
-    )
     transit_max_edge_dist: int = field(
         default=30,
         metadata={"description": "This field determined the maximum distance in meters"\
                   "between a transit node, and the nearest edge."}
+    )
+    transit_max_move_dist: int = field(
+        default=200,
+        metadata={"description": "The maximum distance in meters between the previous"
+                  "transit location, and the new moved transit location."}
     )
 
 

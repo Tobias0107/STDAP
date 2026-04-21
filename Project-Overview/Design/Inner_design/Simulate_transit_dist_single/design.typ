@@ -1,7 +1,7 @@
 /*
   Requirements:
 
-  This simulation should obtain the fraction of car-accessible road to transform into pedestrian area.\ 
+  This simulation should obtain the fraction of car-accessible road to transform into pedestrian area.\
   Then it should estimate the location of the new transit points. \
   Doing so it should calculate the new distance to those transit points for every neighborhood (buurt).\
   Then it should divide the new distance by the amount of people living in that neighborhood of a certain demographic group. This should be done for every demographic group. The results should be added to a total. This would result in the average increase in distance for every demographic group. \
@@ -30,13 +30,21 @@
  + Sort edges based on length / population or amenity.
  + Remove number of edges in database
  + Remove number of edges in Network
- + Per transit, determine if still connected to at least 2 edges. If not, relocate.
- + Per neighborhood 
+ + Move transit
+  - Simpel move:
+   - Move if node degree < 2
+   - Move to closest node with degree >= 2
+  - Route based move (minimizing route adjusting)
+   - Extract current routes
+   - Determine best path keeping 80% (configurable) of the transit
+  - Poisson distribution keeping or not keeping existing transit.
+  - Move minimizing travel time
+ + Per neighborhood
   + Calculate distance from 5 points to closest transit
   + Store the the average of the distance to the 5 points.
   + Calculate for every demographic group, this average multiplied by the percentage of the demographic group of the total.
 - Visualization
  + Old network
  + New, transformed network
-  - Color neighborhoods by increase/decrease in distance. 
+  - Color neighborhoods by increase/decrease in distance.
  + Bar diagram with bar for every demographic groups average increase/decrease in distance.

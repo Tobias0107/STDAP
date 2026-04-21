@@ -243,12 +243,38 @@ class Database:
 
     def to_csv(self, limit=10):
         """ Convert every table in database to a csv with given limit. For debugging purposes only. """
-        self.conn.sql(f"SELECT * FROM CBS LIMIT {limit}").to_csv("CBS_database_preview.csv")
-        self.conn.sql(f"SELECT * FROM Neighborhoods LIMIT {limit}").to_csv("Neighborhoods_database_preview.csv")
-        self.conn.sql(f"SELECT * FROM Graph_nodes LIMIT {limit}").to_csv("Graph_nodes_database_preview.csv")
-        self.conn.sql(f"SELECT * FROM Graph_edges LIMIT {limit}").to_csv("Graph_edges_database_preview.csv")
-        self.conn.sql(f"SELECT * FROM Neighborhood_pts LIMIT {limit}").to_csv("Neighborhood_pts_database_preview.csv")
-        self.conn.sql(f"SELECT * FROM Features LIMIT {limit}").to_csv("Features_database_preview.csv")
+        try:
+            self.conn.sql(f"SELECT * FROM CBS LIMIT {limit}").to_csv("CBS_database_preview.csv")
+        except Exception:
+            pass
+        try:
+            self.conn.sql(f"SELECT * FROM Neighborhoods LIMIT {limit}").to_csv("Neighborhoods_database_preview.csv")
+        except Exception:
+            pass
+        try:
+            self.conn.sql(f"SELECT * FROM Graph_nodes LIMIT {limit}").to_csv("Graph_nodes_database_preview.csv")
+        except Exception:
+            pass
+        try:
+            self.conn.sql(f"SELECT * FROM Graph_edges LIMIT {limit}").to_csv("Graph_edges_database_preview.csv")
+        except Exception:
+            pass
+        try:
+            self.conn.sql(f"SELECT * FROM Neighborhood_pts LIMIT {limit}").to_csv("Neighborhood_pts_database_preview.csv")
+        except Exception:
+            pass
+        try:
+            self.conn.sql(f"SELECT * FROM Features LIMIT {limit}").to_csv("Features_database_preview.csv")
+        except Exception:
+            pass
+        try:
+            self.conn.sql(f"SELECT * FROM Bus_stations LIMIT {limit}").to_csv("Bus_stations_database_preview.csv")
+        except Exception:
+            pass
+        try:
+            self.conn.sql(f"SELECT * FROM Bus_stations_to_move LIMIT {limit}").to_csv("Bus_stations_to_move_database_preview.csv")
+        except Exception:
+            pass
 
     def get_cities(self):
         """
@@ -513,6 +539,7 @@ class Database:
         ### Side_effects;
             - Updates Graph_edges table removed tag (BOOLEAN)
             - Removes edges from graph network
+            - Updates street_count in Graph_nodes table
         """
         one_way_worth = settings.one_way_worth
         if not (use_population ^ use_amenity):
@@ -554,13 +581,30 @@ class Database:
                       AND Graph_edges.key = edges_to_remove.key
         """)
 
-    def move_transit(self):
+        # Update street count
+        self.conn.sql("""
+            UPDATE Graph_nodes SET street_count = 0;
+
+            UPDATE Graph_nodes
+            SET street_count = sub.degree
+            FROM (SELECT node_id, count(*) AS degree
+                  FROM (
+                      SELECT u AS node_id FROM Graph_edges WHERE removed='false'
+                      UNION ALL
+                      SELECT v AS node_id FROM Graph_edges WHERE removed='false' AND oneway='true'
+                      )
+                  GROUP BY node_id
+                 ) sub
+            WHERE id = sub.node_id
+        """)
+
+
+    def move_transit_simpel(self):
         """
         ### Description
-            Moves Bus and Tram stations that are isolated from the driving network.
-            Busses and Trams are isolated if the roads where they are located on,
-            have less edges than the minimum edges that is set in settings.py
-            (transit_min_edges). Default = 2.
+            Moves Bus stations that are isolated from the driving network.
+            A node will be considered isolated if the degree < 2. The transit will
+            then be moved to the nearest node with a degree >= 2.
             As transit stops are not nessisarily connected to the street network, transit
             is mapped to the nearest edge in the network. Here the maximum distance between
             a transit and an edge before the transit is ignored can be set in settings.py
@@ -574,11 +618,43 @@ class Database:
                 True: Some changes made
                 False: No changes made
         ### Side_effects;
+            - Creates table Bus_stations linking busstations to nodes. (If it doesn't exist already)
+            - (Re)creates table for Bus_stations_to_move.
             - Updates Features table with new, moved transit
         """
-        # Get transit bus/tram having less edges than the minimum.
-        min_edges = settings.transit_min_edges
 
+        # Link bus-stations to nodes (create (temp) table)
+        self.conn.sql(f"""
+            CREATE TABLE IF NOT EXISTS Bus_stations AS
+            SELECT f.id AS feature_id, n.id AS node_id, f.loc
+            FROM (SELECT * FROM Features WHERE bus IS NOT NULL) f
+            JOIN Graph_nodes n
+            ON ST_DWithin(f.loc, n.loc, {settings.transit_max_edge_dist})
+            QUALIFY row_number() OVER (PARTITION BY f.element, f.id ORDER BY ST_Distance(f.loc, n.loc) ASC) = 1
+        """)
+
+        # Get minimal pairs with smallest distance between the two.
+        self.conn.sql(f"""
+            CREATE TABLE IF NOT EXISTS Bus_stations_to_move AS
+            SELECT isolated_busses.feature_id AS bus_stop_feature_id,
+                   isolated_busses.node_id AS old_node, node_candidates.id AS new_id,
+                   isolated_busses.loc AS old_loc, node_candidates.loc AS new_loc
+            FROM (SELECT b.node_id, b.feature_id, b.loc
+                  FROM Bus_stations b
+                  JOIN Graph_nodes n
+                  ON b.node_id = n.id
+                  WHERE street_count < 2
+                 ) isolated_busses
+            JOIN (SELECT id, loc
+                  FROM Graph_nodes
+                  WHERE street_count >= 2
+                 ) node_candidates
+            ON ST_DWithin(isolated_busses.loc, node_candidates.loc, {settings.transit_max_move_dist})
+            QUALIFY row_number() OVER (PARTITION BY isolated_busses.feature_id
+                                       ORDER BY ST_Distance(isolated_busses.loc, node_candidates.loc) ASC) = 1
+        """)
+
+        # Update Features with new, moved transit.
 
     def get_neighborhood_dist_to_nearest_transit(self):
         pass
