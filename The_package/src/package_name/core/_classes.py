@@ -37,15 +37,27 @@ class Network:
         self.osm_pbf_path = None
         self.gtfs_files = None
 
-        if os.path.isfile(f"{self.path}.graphml"):
-            self.graph = ox.io.load_graphml(f"{self.path}.graphml")
+        if os.path.isfile(f"{self.path}_drive.graphml"):
+            self.graph_drive = ox.io.load_graphml(f"{self.path}_drive.graphml")
         else:
-            self.graph = get_graph(city)
+            self.graph_drive = get_graph(city)
             if store_in_file:
-                ox.io.save_graphml(self.graph, f"{self.path}.graphml")
+                ox.io.save_graphml(self.graph_drive, f"{self.path}_drive.graphml")
 
-    def get_nodes_and_edges(self):
-        return ox.convert.graph_to_gdfs(self.graph)
+        if os.path.isfile(f"{self.path}_ped.graphml"):
+            self.graph_pedestrian = ox.io.load_graphml(f"{self.path}_ped.graphml")
+        else:
+            self.graph_pedestrian = get_graph(city, network_type="walk")
+            if store_in_file:
+                ox.io.save_graphml(self.graph_pedestrian, f"{self.path}_ped.graphml")
+
+    def get_drive_network_df(self):
+        "Returns tuple (nodes, edges) of driving network converted to pandas dataframe"
+        return ox.convert.graph_to_gdfs(self.graph_drive)
+
+    def get_pedestrian_network_df(self):
+        "Returns tuple (nodes, edges) of pedestrian network converted to pandas dataframe"
+        return ox.convert.graph_to_gdfs(self.graph_pedestrian)
 
     def get_features(self, amenity=True, public_transport=True):
         if os.path.isfile(f"{self.path}.parquet"):
@@ -56,9 +68,14 @@ class Network:
                 self.features.to_parquet(f"{self.path}.parquet")
         return self.features
 
-    def remove_edges(self, ebunch):
-        "Given a list of tuples (u, v) or (u, v, key). Removes the edges from the network"
-        self.graph.remove_edges_from(ebunch)
+    def transform_edges(self, ebunch):
+        """
+            Given a list of tuples (u, v) or (u, v, key).
+            Removes the edges from the driving network
+            and adds them to the pedestrian network
+        """
+        self.graph_drive.remove_edges_from(ebunch)
+        self.graph_pedestrian.add_edges_from(ebunch)
 
     def build_r5_network(self, osm_pbf_path: str, gtfs_files: list):
         """
@@ -328,7 +345,7 @@ class Database:
         self.conn.sql("DELETE FROM Graph_edges")
 
         # Obtain data as GeoDataFrames (GeoPandas)
-        nodes_df, edges_df = self.network.get_nodes_and_edges()
+        nodes_df, edges_df = self.network.get_drive_network_df()
 
         # Make GeoDataFrames importable by duckdb
         nodes = nodes_df.to_arrow()
@@ -570,7 +587,7 @@ class Database:
         # Remove edges from network
         to_remove_df = self.conn.sql("SELECT u, v, key FROM edges_to_remove").df()
         ebunch = list(to_remove_df.itertuples(index=False, name=None))
-        self.network.remove_edges(ebunch)
+        self.network.transform_edges(ebunch)
 
         # Update the Graph_edges table with removed edges
         self.conn.sql("""

@@ -50,3 +50,4 @@
  + New, transformed network
   - Color neighborhoods by increase/decrease in distance.
  + Bar diagram with bar for every demographic groups average increase/decrease in distance.
+ + Something showing network fragmentation
