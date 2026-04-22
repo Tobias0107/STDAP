@@ -561,11 +561,12 @@ class Database:
                 ON e.neighborhood_id = n.id
                 QUALIFY sum(e.length)
                     OVER (ORDER BY (CASE WHEN e.oneway
-                                        THEN ({density} / e.length * {one_way_worth})
-                                        ELSE ({density} / e.length) END ) DESC )
+                                        THEN ({density} * {one_way_worth})
+                                        ELSE ({density}) END ) DESC )
                     <=  ({fraction} * {tot_len}) ) sub
             WHERE sub.removed = 'false'
         """)
+
         # Remove edges from network
         to_remove_df = self.conn.sql("SELECT u, v, key FROM edges_to_remove").df()
         ebunch = list(to_remove_df.itertuples(index=False, name=None))
@@ -598,8 +599,28 @@ class Database:
             WHERE id = sub.node_id
         """)
 
+    def link_busses(self):
+        """
+        ### Expected:
+            - Pre-process done (pre_process called)
+        ### Parameters:
+            - None
+        ### Returns:
+            - None
+        ### Side_effects;
+            - Creates table Bus_stations linking busstations to nodes. (If it doesn't exist already)
+        """
+        # Link bus-stations to nodes (create table Bus_stations)
+        self.conn.sql(f"""
+            CREATE TABLE IF NOT EXISTS Bus_stations AS
+            SELECT f.id AS feature_id, n.id AS node_id, f.loc
+            FROM (SELECT * FROM Features WHERE bus IS NOT NULL) f
+            JOIN Graph_nodes n
+            ON ST_DWithin(f.loc, n.loc, {settings.transit_max_edge_dist})
+            QUALIFY row_number() OVER (PARTITION BY f.element, f.id ORDER BY ST_Distance(f.loc, n.loc) ASC) = 1
+        """)
 
-    def move_transit_simpel(self):
+    def move_transit_minimal(self):
         """
         ### Description
             Moves Bus stations that are isolated from the driving network.
@@ -610,34 +631,20 @@ class Database:
             a transit and an edge before the transit is ignored can be set in settings.py
             (transit_max_edge_dist). Default = 30. (In meters)
         ### Expected:
-            - Pre-process done (pre_process called)
+            - busses linked (link_busses called)
         ### Parameters:
             - None
         ### Returns:
-            - Boolean:\n
-                True: Some changes made
-                False: No changes made
+            - None
         ### Side_effects;
-            - Creates table Bus_stations linking busstations to nodes. (If it doesn't exist already)
             - (Re)creates table for Bus_stations_to_move.
-            - Updates Features table with new, moved transit
+            - Updates Bus_stations table with new, moved transit
         """
-
-        # Link bus-stations to nodes (create (temp) table)
-        self.conn.sql(f"""
-            CREATE TABLE IF NOT EXISTS Bus_stations AS
-            SELECT f.id AS feature_id, n.id AS node_id, f.loc
-            FROM (SELECT * FROM Features WHERE bus IS NOT NULL) f
-            JOIN Graph_nodes n
-            ON ST_DWithin(f.loc, n.loc, {settings.transit_max_edge_dist})
-            QUALIFY row_number() OVER (PARTITION BY f.element, f.id ORDER BY ST_Distance(f.loc, n.loc) ASC) = 1
-        """)
-
         # Get minimal pairs with smallest distance between the two.
         self.conn.sql(f"""
             CREATE TABLE IF NOT EXISTS Bus_stations_to_move AS
-            SELECT isolated_busses.feature_id AS bus_stop_feature_id,
-                   isolated_busses.node_id AS old_node, node_candidates.id AS new_id,
+            SELECT isolated_busses.feature_id AS feature_id,
+                   isolated_busses.node_id AS old_node, node_candidates.id AS new_node,
                    isolated_busses.loc AS old_loc, node_candidates.loc AS new_loc
             FROM (SELECT b.node_id, b.feature_id, b.loc
                   FROM Bus_stations b
@@ -654,9 +661,32 @@ class Database:
                                        ORDER BY ST_Distance(isolated_busses.loc, node_candidates.loc) ASC) = 1
         """)
 
-        # Update Features with new, moved transit.
+        # Update Bus_stations with new, moved transit.
+        self.conn.sql("""
+            UPDATE Bus_stations
+            SET node_id = b.new_node
+            FROM Bus_stations_to_move b
+            WHERE Bus_stations.feature_id = b.feature_id
+            """)
 
     def get_neighborhood_dist_to_nearest_transit(self):
+        """
+        ### Description
+            For every point representing a neighborhood, it will calculate the
+            distance to the nearest transit.
+        ### Expects
+            - link_busses()
+            - create_pts_per_neighborhood()
+        ### Returns
+            - None
+        ### Side-effects:
+            - (Re)creates table distances (neighborhood, point, dist)
+        """
+        # distances = nx.multi_source_dijkstra_path_length(
+        #     G,
+        #     sources=endpoints,
+        #     weight="length"   # or "travel_time" if you have it
+        # )
         pass
 
     def get_colored_network(self):

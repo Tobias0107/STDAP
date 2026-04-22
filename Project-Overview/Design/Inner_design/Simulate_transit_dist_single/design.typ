@@ -31,13 +31,15 @@
  + Remove number of edges in database
  + Remove number of edges in Network
  + Move transit
+  - When relocating, take pedestrian accessibility into account
+   - Import pedestrian network (also needed later)
+   - Import this network also into Duckdb (pre-processed)
+   - Merge the two networks to find overlapping edges (do not update after transforming f edges (nodes remain the same))
+   - Moving only onto this network
   - Simpel move:
    - Move if node degree < 2
    - Move to closest node with degree >= 2
   - Route based move (minimizing route adjusting)
-   - Extract current routes
-   - Determine best path keeping 80% (configurable) of the transit
-  - Poisson distribution keeping or not keeping existing transit.
   - Move minimizing travel time
  + Per neighborhood
   + Calculate distance from 5 points to closest transit

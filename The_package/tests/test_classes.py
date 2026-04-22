@@ -44,10 +44,11 @@ class TestDatabase:
         database.remove_f_edges(0.2, use_population=False, use_amenity=True)
 
     def test_move_transit_simple(self):
-        database.move_transit_simpel()
+        database.link_busses()
+        database.move_transit_minimal()
 
     def test_show_database(self):
-        database.to_csv(limit=100)
+        database.to_csv(limit=1000000)
 
 
 # class TestNetwork:
