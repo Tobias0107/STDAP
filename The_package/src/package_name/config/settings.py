@@ -48,6 +48,14 @@ class Settings:
         metadata={"description": "The maximum distance in meters between the previous"
                   "transit location, and the new moved transit location."}
     )
+    max_dist_ped_transit: int = field(
+        default=30,
+        metadata={"description": "The maximum distance in meters between a transit station"
+                  "and the pedestrian network. This is needed as nodes between the networks do"
+                  "not nessisarily overlap. This constant acts as a buffer allowing the networks"
+                  "to be merged, and obtain the nodes in the driving network accessible by the"
+                  "pedestrian network."}
+    )
 
 
 _settings = Settings()

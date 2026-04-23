@@ -47,6 +47,9 @@ class TestDatabase:
         database.link_busses()
         database.move_transit_minimal()
 
+    def test_get_neighborhood_dist_to_nearest_transit(self):
+        database.get_neighborhood_dist_to_nearest_transit()
+
     def test_show_database(self):
         database.to_csv(limit=1000000)
 

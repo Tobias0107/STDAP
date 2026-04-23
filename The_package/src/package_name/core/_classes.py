@@ -6,10 +6,12 @@
 # Importing packages
 import duckdb as db
 import osmnx as ox
+import networkx as nx
 import os
 import pandas as pd
 import numpy as np
 import geopandas as gpd
+import pyarrow as pa
 
 
 # Importing helper functions from utils
@@ -55,11 +57,24 @@ class Network:
         "Returns tuple (nodes, edges) of driving network converted to pandas dataframe"
         return ox.convert.graph_to_gdfs(self.graph_drive)
 
-    def get_pedestrian_network_df(self):
-        "Returns tuple (nodes, edges) of pedestrian network converted to pandas dataframe"
-        return ox.convert.graph_to_gdfs(self.graph_pedestrian)
+    def get_pedestrian_nodes_df(self):
+        "Returns tuple nodes of pedestrian network converted to pandas dataframe"
+        return ox.convert.graph_to_gdfs(self.graph_pedestrian, edges=False, fill_edge_geometry=False)
+
+    def get_distances_to_transit(self, ped_transit_nodes):
+        """
+            Calculates the distance from the sources, that is the transit stops
+            (nodes on pedestrian network), to all other nodes in the network.
+            Returns: A dictionary {node_id:dist_to_closest_transit}
+        """
+        # Get undirected graph (as pedestrian network is undirected)
+        G = self.graph_pedestrian.to_undirected(reciprocal=False)
+        # Calculate the distances from ped_transit_nodes to all other nodes in ped_network
+        return nx.multi_source_dijkstra_path_length(G, ped_transit_nodes, weight="length")
+
 
     def get_features(self, amenity=True, public_transport=True):
+        """ Import features via api or file, and then return features as GeoDataFrame """
         if os.path.isfile(f"{self.path}.parquet"):
             self.features = gpd.read_parquet(f"{self.path}.parquet")
         else:
@@ -292,6 +307,14 @@ class Database:
             self.conn.sql(f"SELECT * FROM Bus_stations_to_move LIMIT {limit}").to_csv("Bus_stations_to_move_database_preview.csv")
         except Exception:
             pass
+        try:
+            self.conn.sql(f"SELECT * FROM Graph_nodes_accessible LIMIT {limit}").to_csv("Graph_nodes_accessible_database_preview.csv")
+        except Exception:
+            pass
+        try:
+            self.conn.sql(f"SELECT * FROM Distances LIMIT {limit}").to_csv("Distances_database_preview.csv")
+        except Exception:
+            pass
 
     def get_cities(self):
         """
@@ -335,8 +358,10 @@ class Database:
         ### Returns:
             - None
         ### Side-effects:
+            - Store network in database
             - (Re)create Graph_nodes Table
             - (Re)create Graph_edges Table
+            - (Re)create Graph_nodes_accessible Table
         """
         self.network = network
 
@@ -377,6 +402,19 @@ class Database:
                              ), c.geom)
                 WHERE recs='Buurt' AND gm_naam='{self.city}'
             """)
+        # Get pedestrian nodes
+        ped_nodes_df = self.network.get_pedestrian_nodes_df()
+        ped_nodes = ped_nodes_df.to_arrow()
+
+        # Create Graph_nodes_accessible max_dist_ped_transit
+        self.conn.sql(f"""
+            CREATE OR REPLACE TABLE Graph_nodes_accessible AS
+            SELECT n.*, p.osmid AS pedestrian_node_id
+            FROM Graph_nodes n
+            JOIN ped_nodes p
+            ON ST_DWithin(p.geometry, n.loc, {settings.max_dist_ped_transit})
+        """)
+
 
     def obtain_features(self, amenity=True, public_transport=True):
         """
@@ -642,7 +680,8 @@ class Database:
         ### Description
             Moves Bus stations that are isolated from the driving network.
             A node will be considered isolated if the degree < 2. The transit will
-            then be moved to the nearest node with a degree >= 2.
+            then be moved to the nearest node with a degree >= 2 that is connected
+            to the pedestrian network.
             As transit stops are not nessisarily connected to the street network, transit
             is mapped to the nearest edge in the network. Here the maximum distance between
             a transit and an edge before the transit is ignored can be set in settings.py
@@ -659,7 +698,7 @@ class Database:
         """
         # Get minimal pairs with smallest distance between the two.
         self.conn.sql(f"""
-            CREATE TABLE IF NOT EXISTS Bus_stations_to_move AS
+            CREATE OR REPLACE TABLE Bus_stations_to_move AS
             SELECT isolated_busses.feature_id AS feature_id,
                    isolated_busses.node_id AS old_node, node_candidates.id AS new_node,
                    isolated_busses.loc AS old_loc, node_candidates.loc AS new_loc
@@ -669,8 +708,8 @@ class Database:
                   ON b.node_id = n.id
                   WHERE street_count < 2
                  ) isolated_busses
-            JOIN (SELECT id, loc
-                  FROM Graph_nodes
+            JOIN (SELECT DISTINCT id, loc
+                  FROM Graph_nodes_accessible
                   WHERE street_count >= 2
                  ) node_candidates
             ON ST_DWithin(isolated_busses.loc, node_candidates.loc, {settings.transit_max_move_dist})
@@ -690,21 +729,38 @@ class Database:
         """
         ### Description
             For every point representing a neighborhood, it will calculate the
-            distance to the nearest transit.
+            distance to the nearest transit using the pedestrian network.
         ### Expects
             - link_busses()
             - create_pts_per_neighborhood()
         ### Returns
             - None
         ### Side-effects:
-            - (Re)creates table distances (neighborhood, point, dist)
+            - (Re)creates table Distances (node_id, dist)
         """
-        # distances = nx.multi_source_dijkstra_path_length(
-        #     G,
-        #     sources=endpoints,
-        #     weight="length"   # or "travel_time" if you have it
-        # )
-        pass
+        # Get Sources = Transit stops (as they are less points)
+        ped_transit_np = self.conn.sql("""
+            SELECT n.pedestrian_node_id
+            FROM Graph_nodes_accessible n
+            JOIN Bus_stations b
+            ON n.id = b.node_id
+        """).fetchnumpy()
+        ped_transit = ped_transit_np['pedestrian_node_id'].tolist()
+
+        # Calculate distances from sources to all other nodes
+        dists = self.network.get_distances_to_transit(ped_transit)
+
+        # Import into duckdb
+        dists_table = pa.table({
+            "node_id": list(dists.keys()),
+            "dist": list(dists.values())
+        })
+        self.conn.register("dists_table", dists_table)
+        self.conn.sql("""
+            CREATE OR REPLACE TABLE Distances AS
+            SELECT *
+            FROM dists_table
+        """)
 
     def get_colored_network(self):
         pass
