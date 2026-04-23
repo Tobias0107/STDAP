@@ -50,6 +50,9 @@ class TestDatabase:
     def test_get_neighborhood_dist_to_nearest_transit(self):
         database.get_neighborhood_dist_to_nearest_transit()
 
+    def test_get_dist_per_neighborhood(self):
+        database.get_dist_per_neighborhood()
+
     def test_show_database(self):
         database.to_csv(limit=1000000)
 

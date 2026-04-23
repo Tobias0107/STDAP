@@ -43,6 +43,11 @@ class Settings:
         metadata={"description": "This field determined the maximum distance in meters"\
                   "between a transit node, and the nearest edge."}
     )
+    transit_max_pts_dist: int = field(
+        default=30,
+        metadata={"description": "This field determines the maximum distance in meters"\
+                  "between a point in a neighborhood, and the nearest node in the pedestrian network."}
+    )
     transit_max_move_dist: int = field(
         default=200,
         metadata={"description": "The maximum distance in meters between the previous"

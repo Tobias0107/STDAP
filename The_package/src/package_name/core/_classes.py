@@ -175,8 +175,9 @@ class Database:
             CREATE TABLE Neighborhoods (
                 id VARCHAR PRIMARY KEY,
                 regio VARCHAR,
-                pop_density FLOAT,
-                amenity_density FLOAT,
+                population BIGINT,
+                amenities BIGINT,
+                area BIGINT,
                 male_density FLOAT,
                 female_density FLOAT,
                 age_density_00_14 FLOAT,
@@ -219,6 +220,7 @@ class Database:
                 neighborhood_id VARCHAR,
                 pts_id INTEGER DEFAULT NEXTVAL('seq_pts_id'),
                 pt GEOMETRY,
+                node_id BIGINT,
                 PRIMARY KEY (neighborhood_id, pts_id)
             );
             CREATE TABLE Features (
@@ -274,7 +276,7 @@ class Database:
             """)
 
     def to_csv(self, limit=10):
-        """ Convert every table in database to a csv with given limit. For debugging purposes only. """
+        """ Convert every table currently in database to a csv with given limit. For debugging purposes only. """
         try:
             self.conn.sql(f"SELECT * FROM CBS LIMIT {limit}").to_csv("CBS_database_preview.csv")
         except Exception:
@@ -312,7 +314,15 @@ class Database:
         except Exception:
             pass
         try:
+            self.conn.sql(f"SELECT * FROM Graph_nodes_ped LIMIT {limit}").to_csv("Graph_nodes_ped_database_preview.csv")
+        except Exception:
+            pass
+        try:
             self.conn.sql(f"SELECT * FROM Distances LIMIT {limit}").to_csv("Distances_database_preview.csv")
+        except Exception:
+            pass
+        try:
+            self.conn.sql(f"SELECT * FROM Dist_per_neighborhood LIMIT {limit}").to_csv("Dist_per_neighborhood_database_preview.csv")
         except Exception:
             pass
 
@@ -406,12 +416,19 @@ class Database:
         ped_nodes_df = self.network.get_pedestrian_nodes_df()
         ped_nodes = ped_nodes_df.to_arrow()
 
-        # Create Graph_nodes_accessible max_dist_ped_transit
+        # Create Graph_nodes_ped (storing the nodes of the pedestrian network)
+        self.conn.sql("""
+            CREATE TABLE IF NOT EXISTS Graph_nodes_ped AS
+            SELECT *
+            FROM ped_nodes
+        """)
+
+        # Create Graph_nodes_accessible (storing drive network nodes accessible by pedestrian network)
         self.conn.sql(f"""
             CREATE OR REPLACE TABLE Graph_nodes_accessible AS
             SELECT n.*, p.osmid AS pedestrian_node_id
             FROM Graph_nodes n
-            JOIN ped_nodes p
+            JOIN Graph_nodes_ped p
             ON ST_DWithin(p.geometry, n.loc, {settings.max_dist_ped_transit})
         """)
 
@@ -488,8 +505,9 @@ class Database:
                 SELECT
                     c.id,
                     c.regio,
-                    c.pop / area,
-                    coalesce(a.count, 0) / area,
+                    c.pop,
+                    coalesce(a.count, 0),
+                    area,
                     c.male / area,
                     c.female / area,
                     c.age_00_14 / area,
@@ -534,7 +552,7 @@ class Database:
             - (Re)create Neighborhood_pts table
         ### Notes'
             - Uses algorithm from configuration to obtain point locations
-            - Done in parallel for extra speed
+            - Links point locations to nearest node in pedestrian network
         """
         # Obtain bounding box as dataframe:
         df = self.conn.sql("""
@@ -565,12 +583,15 @@ class Database:
         })
 
         # Import dataframe to duckdb
-        self.conn.sql("""
-            INSERT INTO Neighborhood_pts (neighborhood_id, pt)
-            SELECT pt.ids, ST_Point(pt.xs, pt.ys)
+        self.conn.sql(f"""
+            INSERT INTO Neighborhood_pts (neighborhood_id, pt, node_id)
+            SELECT pt.ids, ST_Point(pt.xs, pt.ys), ped.osmid
             FROM Neighborhood_pts_df pt
             JOIN Neighborhoods n
             ON pt.ids = n.id AND ST_Within(ST_Point(pt.xs, pt.ys), n.geometry)
+            JOIN Graph_nodes_ped ped
+            ON ST_DWithin(ST_Point(pt.xs, pt.ys), ped.geometry, {settings.transit_max_pts_dist})
+            QUALIFY row_number() OVER (PARTITION BY ped.osmid ORDER BY ST_Distance(ST_Point(pt.xs, pt.ys), ped.geometry) ASC) = 1
             """)
 
 
@@ -600,9 +621,9 @@ class Database:
         if not (use_population ^ use_amenity):
             raise ValueError("use_population and use_amenity can't be both true or both false")
         elif use_population:
-            density = "n.pop_density"
+            density = "n.population / n.area"
         else:
-            density = "n.amenity_density"
+            density = "n.amenities / n.area"
 
         # Get id of edges to be removed.
         tot_len = "(SELECT sum(length) from Graph_edges)"
@@ -762,6 +783,44 @@ class Database:
             FROM dists_table
         """)
 
-    def get_colored_network(self):
+    def get_dist_per_neighborhood(self):
+        """
+        ### Expects:
+            - get_neighborhood_dist_to_nearest_transit
+        ### Parameters:
+            - None
+        ### Returns:
+            - pandas dataframe:\n
+                (neighborhood, avg_dist)
+        ### Side-effects:
+            - (Re)creates table Dist_per_neighborhood
+        """
+        # Group by neighborhood, join point with dist, avg dist
+        self.conn.sql("""
+            CREATE OR REPLACE TABLE Dist_per_neighborhood AS
+            SELECT pt.neighborhood_id, avg(d.dist) AS avg_dist
+            FROM Neighborhood_pts pt
+            JOIN Distances d
+            ON pt.node_id = d.node_id
+            GROUP BY pt.neighborhood_id
+        """)
+        return self.conn.sql("SELECT * FROM Dist_per_neighborhood").df()
+
+    def get_demographic_average_increase(self):
+        """
+        ### Expects:
+            - get_neighborhood_dist_to_nearest_transit
+            - get_dist_per_neighborhood
+        ### Parameters:
+            - None
+        ### Returns:
+            - Dictionary:\n
+                {dem_grp: avg_dist}
+        ### Side-effects:
+            - None
+        """
+        # Group by neighborhood, calculate avg of distances per point
+        # 
         pass
+
 
