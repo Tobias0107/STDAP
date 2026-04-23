@@ -1,6 +1,10 @@
 """
     This file contains all class definitions except for the main class.
     For details, please see the UML or manual.
+
+    TODO: Informatieverlies printen. By test:
+        - 4 door geen punten binnen neighborhood (radius=30)
+        - Rest door geen voetpad in buurt van punten.
 """
 
 # Importing packages
@@ -132,6 +136,9 @@ class Database:
             - Creates all tables for database (see design)
             - Uses csv and geopackage to fill CBS table
         """
+        # Keeping track of neighborhoods that are dropped during point generation
+        self.num_buurten = 0
+        self.lost = 0
 
         # Creating a connection to a new database (in memory)
         self.conn = db.connect()
@@ -178,25 +185,25 @@ class Database:
                 population BIGINT,
                 amenities BIGINT,
                 area BIGINT,
-                male_density FLOAT,
-                female_density FLOAT,
-                age_density_00_14 FLOAT,
-                age_density_15_24 FLOAT,
-                age_density_25_44 FLOAT,
-                age_density_45_64 FLOAT,
-                age_density_65_oo FLOAT,
-                background_density_nl FLOAT,
-                background_density_eu FLOAT,
-                background_density_neu FLOAT,
-                birthplace_density_nl FLOAT,
-                birthplace_density_eu FLOAT,
-                birthplace_density_neu FLOAT,
-                low_education_density FLOAT,
-                medium_education_density FLOAT,
-                high_education_density FLOAT,
-                low_income_density FLOAT,
-                high_income_density FLOAT,
-                risk_poverty_density FLOAT,
+                num_male FLOAT,
+                num_female FLOAT,
+                num_age_00_14 FLOAT,
+                num_age_15_24 FLOAT,
+                num_age_25_44 FLOAT,
+                num_age_45_64 FLOAT,
+                num_age_65_oo FLOAT,
+                num_background_nl FLOAT,
+                num_background_eu FLOAT,
+                num_background_neu FLOAT,
+                num_birthplace_nl FLOAT,
+                num_birthplace_eu FLOAT,
+                num_birthplace_neu FLOAT,
+                num_low_education FLOAT,
+                num_medium_education FLOAT,
+                num_high_education FLOAT,
+                num_low_income FLOAT,
+                num_high_income FLOAT,
+                num_risk_poverty FLOAT,
                 geometry GEOMETRY
             );
             CREATE TABLE Graph_nodes (
@@ -508,25 +515,25 @@ class Database:
                     c.pop,
                     coalesce(a.count, 0),
                     area,
-                    c.male / area,
-                    c.female / area,
-                    c.age_00_14 / area,
-                    c.age_15_24 / area,
-                    c.age_25_44 / area,
-                    c.age_45_64 / area,
-                    c.age_65_oo / area,
-                    c.background_nl / area,
-                    c.background_eu / area,
-                    c.background_neu / area,
-                    c.birthplace_nl / area,
-                    c.birthplace_eu / area,
-                    c.birthplace_neu / area,
-                    c.low_education / area,
-                    c.medium_education / area,
-                    c.high_education / area,
-                    c.low_income / area,
-                    c.high_income / area,
-                    c.risk_poverty / area,
+                    c.male,
+                    c.female,
+                    c.age_00_14,
+                    c.age_15_24,
+                    c.age_25_44,
+                    c.age_45_64,
+                    c.age_65_oo,
+                    c.background_nl,
+                    c.background_eu,
+                    c.background_neu,
+                    c.birthplace_nl,
+                    c.birthplace_eu,
+                    c.birthplace_neu,
+                    c.low_education,
+                    c.medium_education,
+                    c.high_education,
+                    c.low_income,
+                    c.high_income,
+                    c.risk_poverty,
                     c.geom
                 FROM (SELECT *, ST_Area(geom) as area
                       FROM CBS
@@ -543,14 +550,14 @@ class Database:
     def create_pts_per_neighborhood(self):
         """
         ### Expected:
-            - Pre-processing run
+            - Pre_processing run
         ### Parameters:
             - None
         ### Returns:
             - None
         ### Side-effects:
             - (Re)create Neighborhood_pts table
-        ### Notes'
+        ### Notes
             - Uses algorithm from configuration to obtain point locations
             - Links point locations to nearest node in pedestrian network
         """
@@ -591,8 +598,16 @@ class Database:
             ON pt.ids = n.id AND ST_Within(ST_Point(pt.xs, pt.ys), n.geometry)
             JOIN Graph_nodes_ped ped
             ON ST_DWithin(ST_Point(pt.xs, pt.ys), ped.geometry, {settings.transit_max_pts_dist})
-            QUALIFY row_number() OVER (PARTITION BY ped.osmid ORDER BY ST_Distance(ST_Point(pt.xs, pt.ys), ped.geometry) ASC) = 1
+            QUALIFY row_number()
+            OVER (PARTITION BY ped.osmid
+                  ORDER BY ST_Distance(ST_Point(pt.xs, pt.ys), ped.geometry) ASC) = 1
             """)
+
+        # Keeping track of neighborhoods lost during point generation
+        # Total neighborhoods.
+        self.num_buurten = self.conn.sql("SELECT count(id) FROM Neighborhoods").fetchone()[0] # type: ignore
+        # Total lost
+        self.lost = self.num_buurten - self.conn.sql("SELECT count(neighborhood_id) FROM Neighborhood_pts").fetchone()[0] # type: ignore
 
 
     def remove_f_edges(self, fraction: float, use_population=True, use_amenity=False):
@@ -800,7 +815,7 @@ class Database:
             CREATE OR REPLACE TABLE Dist_per_neighborhood AS
             SELECT pt.neighborhood_id, avg(d.dist) AS avg_dist
             FROM Neighborhood_pts pt
-            JOIN Distances d
+            LEFT JOIN Distances d
             ON pt.node_id = d.node_id
             GROUP BY pt.neighborhood_id
         """)
@@ -814,13 +829,83 @@ class Database:
         ### Parameters:
             - None
         ### Returns:
-            - Dictionary:\n
-                {dem_grp: avg_dist}
+            - Pandas DataFrame (dem_grp, avg_dist):\n
+              Demographic groups are the following:
+                - male
+                - female
+                - 0-14
+                - 15-34
+                - 25-44
+                - 45-64
+                - 65+
+                - background_nl
+                - background_eu
+                - background_neu
+                - born_nl
+                - born_eu
+                - born_neu
+                - low_education
+                - mid_education
+                - high_education
+                - low_income
+                - high_income
+                - risk_poverty
         ### Side-effects:
             - None
         """
-        # Group by neighborhood, calculate avg of distances per point
-        # 
-        pass
-
-
+        return self.conn.sql("""
+            WITH
+                Flattened AS (
+                    SELECT id, 'avg' AS key, population AS value FROM Neighborhoods
+                    UNION ALL
+                    SELECT id, 'male', num_male FROM Neighborhoods
+                    UNION ALL
+                    SELECT id, 'female', num_female FROM Neighborhoods
+                    UNION ALL
+                    SELECT id, '0-14', num_age_00_14 FROM Neighborhoods
+                    UNION ALL
+                    SELECT id, '15-24', num_age_15_24 FROM Neighborhoods
+                    UNION ALL
+                    SELECT id, '25-44', num_age_25_44 FROM Neighborhoods
+                    UNION ALL
+                    SELECT id, '45-64', num_age_45_64 FROM Neighborhoods
+                    UNION ALL
+                    SELECT id, '65+', num_age_65_oo FROM Neighborhoods
+                    UNION ALL
+                    SELECT id, 'background_nl', num_background_nl FROM Neighborhoods
+                    UNION ALL
+                    SELECT id, 'background_eu', num_background_eu FROM Neighborhoods
+                    UNION ALL
+                    SELECT id, 'background_neu', num_background_neu FROM Neighborhoods
+                    UNION ALL
+                    SELECT id, 'born_nl', num_birthplace_nl FROM Neighborhoods
+                    UNION ALL
+                    SELECT id, 'born_eu', num_birthplace_eu FROM Neighborhoods
+                    UNION ALL
+                    SELECT id, 'born_neu', num_birthplace_neu FROM Neighborhoods
+                    UNION ALL
+                    SELECT id, 'low_education', num_low_education FROM Neighborhoods
+                    UNION ALL
+                    SELECT id, 'mid_education', num_medium_education FROM Neighborhoods
+                    UNION ALL
+                    SELECT id, 'high_education', num_high_education FROM Neighborhoods
+                    UNION ALL
+                    SELECT id, 'low_income', num_low_income FROM Neighborhoods
+                    UNION ALL
+                    SELECT id, 'high_income', num_high_income FROM Neighborhoods
+                    UNION ALL
+                    SELECT id, 'risk_poverty', num_risk_poverty FROM Neighborhoods
+                ),
+                Totals AS (
+                    SELECT key, sum(value) AS total
+                    FROM Flattened
+                    GROUP BY key
+                )
+            SELECT f.key AS dem_grp, sum (f.value * d.avg_dist) / t.total AS avg_dist
+            FROM Flattened f
+            JOIN Totals t
+            ON f.key = t.key
+            LEFT JOIN Dist_per_neighborhood d
+            ON f.id = d.neighborhood_id
+            GROUP BY f.key, t.total
+        """).df()
