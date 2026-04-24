@@ -12,7 +12,7 @@
 # none yet
 
 # Import classes and exceptions
-from _classes import Database, Network
+from package_name.core._classes import Database, Network
 from package_name.exceptions import Initializing_error
 
 
@@ -29,10 +29,12 @@ class simulator:
         all methods important for simulating.
     """
 
-    def __init__(self, csv: str, geopackage:str) -> None:
+    def __init__(self, csv: str, geopackage:str, store_in_file=False, storage_dir='network_cache/') -> None:
         """ Initializes new instance of the simulator for the given datasets """
         self.database = Database(csv, geopackage)
         self.network = None
+        self.store_in_file = store_in_file
+        self.storage_dir = storage_dir
 
     def get_cities(self):
         """ Returns a list of cities available in the given datasets """
@@ -43,7 +45,7 @@ class simulator:
             Tells the simulator what city to research.
             Should be called at least one before running a simulation.
         """
-        self.network = Network(city)
+        self.network = Network(city, self.store_in_file, self.storage_dir)
         self.database.set_city(city)
 
     def Simulate_transit_dist_on_trans(self, fraction: float, *,

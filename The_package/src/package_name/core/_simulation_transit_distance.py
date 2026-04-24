@@ -3,8 +3,9 @@
     distance after removing <fraction> edges.
 """
 # Imports
-from _classes import Database, Network
-
+from package_name.core._classes import Database, Network
+from package_name.utils.util_plotting import plot_demographic_average_distance
+from matplotlib import pyplot as plt
 
 def run_simulation(network:Network, database:Database, f: float,
                    gender=True, age=True, ethnicity=True, SES=True,
@@ -59,8 +60,50 @@ def run_simulation(network:Network, database:Database, f: float,
         ### Side effects:
             - Removes edges from network
             - Adds tables to database
+            - Creates files containing visualizations
     """
+    # Obtaining information, building database tables
+    database.load_network(network)
+    database.obtain_features()
+    database.pre_process()
+    database.create_pts_per_neighborhood()
+    database.link_busses()
+
+    # Run simulation
+    database.calculate_distances_to_nearest_transit()
+
+    # Get beforehand information
+    dists_neighborhoods_t0 = database.get_dist_per_neighborhood()
+    dem_grp_avg_t0 = database.get_demographic_average_distance()
+
+    # Continue simulation
+    database.remove_f_edges(f)
+    database.move_transit_minimal()
+    database.calculate_distances_to_nearest_transit()
+
+    # Get resulting information
+    dists_neighborhoods_t1 = database.get_dist_per_neighborhood()
+    dem_grp_avg_t1 = database.get_demographic_average_distance()
+    # Add points + lost data
+
+    ###########################################################################
+    # Visualization ###########################################################
+    ###########################################################################
+
+    plot_demographic_average_distance(df=dem_grp_avg_t0,
+                                      title="Before transformation",
+                                      storage_folder="results",
+                                      name="Before transformation")
+    plot_demographic_average_distance(df=dem_grp_avg_t1,
+                                      title="After transformation",
+                                      storage_folder="results",
+                                      name="After transformation")
 
 
+    # print("dists_neighborhoods_t0")
+    # print(dists_neighborhoods_t0)
+    # print()    # print("dists_neighborhoods_t1")
+    # print(dists_neighborhoods_t1)
+    # print()
 
 

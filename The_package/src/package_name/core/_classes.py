@@ -617,7 +617,7 @@ class Database:
             Will then remove edges until desired fraction of street-length is reached.
             Meaning successive removals will built upon the previous removals.
         ### Expected:
-            - Created points per neighborhood (create_pts_per_neighborhood() run)
+            - Pre_process run
         ### Parameters:
             - fraction\n
                 The fraction of the total street length to remove from the network.
@@ -761,7 +761,7 @@ class Database:
             WHERE Bus_stations.feature_id = b.feature_id
             """)
 
-    def get_neighborhood_dist_to_nearest_transit(self):
+    def calculate_distances_to_nearest_transit(self):
         """
         ### Description
             For every point representing a neighborhood, it will calculate the
@@ -821,7 +821,7 @@ class Database:
         """)
         return self.conn.sql("SELECT * FROM Dist_per_neighborhood").df()
 
-    def get_demographic_average_increase(self):
+    def get_demographic_average_distance(self):
         """
         ### Expects:
             - get_neighborhood_dist_to_nearest_transit
@@ -908,4 +908,5 @@ class Database:
             LEFT JOIN Dist_per_neighborhood d
             ON f.id = d.neighborhood_id
             GROUP BY f.key, t.total
+            ORDER BY f.key
         """).df()

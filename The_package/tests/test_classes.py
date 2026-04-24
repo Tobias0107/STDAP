@@ -11,8 +11,8 @@
 from package_name.core._classes import Database, Network
 
 
-csv = "tests/TestDatasets/test.csv"
-geopackage = "tests/TestDatasets/test.gpkg"
+csv = "tests/TestDatasets/kwb2025.csv"
+geopackage = "tests/TestDatasets/geopackage.gpkg"
 
 network = Network("Amsterdam", store_in_file=True)
 database = Database(csv, geopackage)
@@ -48,13 +48,13 @@ class TestDatabase:
         database.move_transit_minimal()
 
     def test_get_neighborhood_dist_to_nearest_transit(self):
-        database.get_neighborhood_dist_to_nearest_transit()
+        database.calculate_distances_to_nearest_transit()
 
     def test_get_dist_per_neighborhood(self):
         database.get_dist_per_neighborhood()
 
     def test_get_demographic_average_increase(self):
-        database.get_demographic_average_increase().to_csv("tmp.results.csv")
+        database.get_demographic_average_distance().to_csv("tmp.results.csv")
 
     def test_show_database(self):
         database.to_csv(limit=1000000)
