@@ -21,6 +21,55 @@ class Settings:
         default=0,
         metadata={"description": "Here the description"}
     )
+    dataset_column_names: dict[str, str] = field (
+        default_factory = lambda: {
+            "id": "gwb_code",
+            "regio": "regio",
+            "gm_naam": "gm_naam",
+            "recs": "recs",
+            "pop": "a_inw",
+            "male": "a_man",
+            "female": "a_vrouw",
+            "age_00_14": "a_00_14",
+            "age_15_24": "a_15_24",
+            "age_25_44": "a_25_44",
+            "age_45_64": "a_45_64",
+            "age_65_oo": "a_65_oo",
+            "background_nl": "a_nl_all",
+            "background_eu": "a_eur_al",
+            "background_neu": "a_neu_al",
+            "birthplace_nl": "a_geb_nl",
+            "birthplace_eu": "a_geb_eu",
+            "birthplace_neu": "a_geb_ne",
+            "low_education": "a_opl_lg",
+            "medium_education": "a_opl_md",
+            "high_education": "a_opl_hg",
+            "low_income": "p_ink_li",
+            "high_income": "p_ink_hi",
+            "risk_poverty": "p_ink_ar",
+            "buurtcode": "buurtcode",
+            "geom": "geom"
+        },
+        metadata={"description": "Datasets of different years might have different"
+                  "column names. Therefore this dictionary allows one to change"
+                  "the column names of the dataset that are read by the package."
+                  "The keys of the dictionary are the internal names of the data"
+                  "used for the simulation. The values are the names of the corresponding"
+                  "columns in the datasets (csv / geopackage). Non-existent columns"
+                  "will result in an error. Empty columns will not result in an error."
+                  "The geom and buurtcode come from the geopackage. All other columns"
+                  "come from the csv."}
+    )
+    dataset_nullstring: str = field (
+        default='.',
+        metadata={"description": "The character used for the NULL values in the csv files."
+                  "Parameter to allow compatibility for datasets of different years."}
+    )
+    dataset_delim: str = field (
+        default=',',
+        metadata={"description": "The character used for the delimiter in the csv files."
+                  "Parameter to allow compatibility for datasets of different years."}
+    )
     neighborhood_distribution: Callable[[float, float, float, float], np.typing.NDArray[np.float64]] = field(
         default=functions.Poisson_distribution,
         metadata= {"description": "Given the upper and lower bounds of the "\

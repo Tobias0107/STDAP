@@ -247,39 +247,41 @@ class Database:
             );
         """)
 
+        column_names = settings.dataset_column_names
+
         # Joining the two files into one database (Using only buurtcode and geom from geopackage)
         # Only the (possibly) needed fields are imported from the datasets.
         self.conn.sql(f"""
             INSERT INTO CBS
             SELECT
-                c.gwb_code,
-                c.regio,
-                c.gm_naam,
-                c.recs,
-                c.a_inw,
-                c.a_man,
-                c.a_vrouw,
-                c.a_00_14,
-                c.a_15_24,
-                c.a_25_44,
-                c.a_45_64,
-                c.a_65_oo,
-                c.a_nl_all,
-                c.a_eur_al,
-                c.a_neu_al,
-                c.a_geb_nl,
-                c.a_geb_eu,
-                c.a_geb_ne,
-                c.a_opl_lg,
-                c.a_opl_md,
-                c.a_opl_hg,
-                c.p_ink_li,
-                c.p_ink_hi,
-                c.p_ink_ar,
-                g.geom
-            FROM read_csv('{csv}', nullstr='.') c
-            JOIN (SELECT buurtcode, geom FROM ST_Read('{geopackage}')) g
-            ON c.gwb_code = g.buurtcode
+                c.{column_names["id"]},
+                c.{column_names["regio"]},
+                c.{column_names["gm_naam"]},
+                c.{column_names["recs"]},
+                c.{column_names["pop"]},
+                c.{column_names["male"]},
+                c.{column_names["female"]},
+                c.{column_names["age_00_14"]},
+                c.{column_names["age_15_24"]},
+                c.{column_names["age_25_44"]},
+                c.{column_names["age_45_64"]},
+                c.{column_names["age_65_oo"]},
+                c.{column_names["background_nl"]},
+                c.{column_names["background_eu"]},
+                c.{column_names["background_neu"]},
+                c.{column_names["birthplace_nl"]},
+                c.{column_names["birthplace_eu"]},
+                c.{column_names["birthplace_neu"]},
+                c.{column_names["low_education"]},
+                c.{column_names["medium_education"]},
+                c.{column_names["high_education"]},
+                c.{column_names["low_income"]},
+                c.{column_names["high_income"]},
+                c.{column_names["risk_poverty"]},
+                g.{column_names["geom"]}
+            FROM read_csv('{csv}', nullstr='{settings.dataset_nullstring}', delim='{settings.dataset_delim}') c
+            JOIN (SELECT {column_names["buurtcode"]}, geom FROM ST_Read('{geopackage}')) g
+            ON c.gwb_code = g.{column_names["buurtcode"]}
             """)
 
     def to_csv(self, limit=10):
