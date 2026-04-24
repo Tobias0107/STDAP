@@ -60,8 +60,8 @@ class Settings:
                   "The geom and buurtcode come from the geopackage. All other columns"
                   "come from the csv."}
     )
-    dataset_nullstring: str = field (
-        default='.',
+    dataset_nullstring: list[str] = field (
+        default_factory= lambda: ['.'],
         metadata={"description": "The character used for the NULL values in the csv files."
                   "Parameter to allow compatibility for datasets of different years."}
     )
@@ -69,6 +69,10 @@ class Settings:
         default=',',
         metadata={"description": "The character used for the delimiter in the csv files."
                   "Parameter to allow compatibility for datasets of different years."}
+    )
+    dataset_decimal_separator: str = field (
+        default=',',
+        metadata={"description": "The separating character when reading floats from csv files."}
     )
     neighborhood_distribution: Callable[[float, float, float, float], np.typing.NDArray[np.float64]] = field(
         default=functions.Poisson_distribution,

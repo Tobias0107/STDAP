@@ -174,47 +174,47 @@ class Database:
                 low_education UBIGINT,
                 medium_education UBIGINT,
                 high_education UBIGINT,
-                low_income UBIGINT,
-                high_income UBIGINT,
-                risk_poverty UBIGINT,
+                low_income FLOAT,
+                high_income FLOAT,
+                risk_poverty FLOAT,
                 geom GEOMETRY
             );
             CREATE TABLE Neighborhoods (
                 id VARCHAR PRIMARY KEY,
                 regio VARCHAR,
-                population BIGINT,
-                amenities BIGINT,
-                area BIGINT,
-                num_male FLOAT,
-                num_female FLOAT,
-                num_age_00_14 FLOAT,
-                num_age_15_24 FLOAT,
-                num_age_25_44 FLOAT,
-                num_age_45_64 FLOAT,
-                num_age_65_oo FLOAT,
-                num_background_nl FLOAT,
-                num_background_eu FLOAT,
-                num_background_neu FLOAT,
-                num_birthplace_nl FLOAT,
-                num_birthplace_eu FLOAT,
-                num_birthplace_neu FLOAT,
-                num_low_education FLOAT,
-                num_medium_education FLOAT,
-                num_high_education FLOAT,
-                num_low_income FLOAT,
-                num_high_income FLOAT,
-                num_risk_poverty FLOAT,
+                population UBIGINT,
+                amenities UBIGINT,
+                area UBIGINT,
+                num_male UBIGINT,
+                num_female UBIGINT,
+                num_age_00_14 UBIGINT,
+                num_age_15_24 UBIGINT,
+                num_age_25_44 UBIGINT,
+                num_age_45_64 UBIGINT,
+                num_age_65_oo UBIGINT,
+                num_background_nl UBIGINT,
+                num_background_eu UBIGINT,
+                num_background_neu UBIGINT,
+                num_birthplace_nl UBIGINT,
+                num_birthplace_eu UBIGINT,
+                num_birthplace_neu UBIGINT,
+                num_low_education UBIGINT,
+                num_medium_education UBIGINT,
+                num_high_education UBIGINT,
+                percent_low_income FLOAT,
+                percent_high_income FLOAT,
+                percent_risk_poverty FLOAT,
                 geometry GEOMETRY
             );
             CREATE TABLE Graph_nodes (
-                id BIGINT PRIMARY KEY,
+                id UBIGINT PRIMARY KEY,
                 street_count INTEGER,
                 loc GEOMETRY,
                 neighborhood_id VARCHAR
             );
             CREATE TABLE Graph_edges (
-                u BIGINT,
-                v BIGINT,
+                u UBIGINT,
+                v UBIGINT,
                 key INTEGER,
                 length FLOAT NOT NULL,
                 oneway BOOLEAN NOT NULL,
@@ -227,7 +227,7 @@ class Database:
                 neighborhood_id VARCHAR,
                 pts_id INTEGER DEFAULT NEXTVAL('seq_pts_id'),
                 pt GEOMETRY,
-                node_id BIGINT,
+                node_id UBIGINT,
                 PRIMARY KEY (neighborhood_id, pts_id)
             );
             CREATE TABLE Features (
@@ -279,7 +279,7 @@ class Database:
                 c.{column_names["high_income"]},
                 c.{column_names["risk_poverty"]},
                 g.{column_names["geom"]}
-            FROM read_csv('{csv}', nullstr='{settings.dataset_nullstring}', delim='{settings.dataset_delim}') c
+            FROM read_csv('{csv}', nullstr={str(settings.dataset_nullstring)}, delim='{settings.dataset_delim}', decimal_separator='{settings.dataset_decimal_separator}') c
             JOIN (SELECT {column_names["buurtcode"]}, geom FROM ST_Read('{geopackage}')) g
             ON c.gwb_code = g.{column_names["buurtcode"]}
             """)
@@ -892,11 +892,11 @@ class Database:
                     UNION ALL
                     SELECT id, 'high_education', num_high_education FROM Neighborhoods
                     UNION ALL
-                    SELECT id, 'low_income', num_low_income FROM Neighborhoods
+                    SELECT id, 'low_income', percent_low_income * population FROM Neighborhoods
                     UNION ALL
-                    SELECT id, 'high_income', num_high_income FROM Neighborhoods
+                    SELECT id, 'high_income', percent_high_income * population FROM Neighborhoods
                     UNION ALL
-                    SELECT id, 'risk_poverty', num_risk_poverty FROM Neighborhoods
+                    SELECT id, 'risk_poverty', percent_risk_poverty * population FROM Neighborhoods
                 ),
                 Totals AS (
                     SELECT key, sum(value) AS total
