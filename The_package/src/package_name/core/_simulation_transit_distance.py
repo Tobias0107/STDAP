@@ -4,8 +4,7 @@
 """
 # Imports
 from package_name.core._classes import Database, Network
-from package_name.utils.util_plotting import plot_demographic_average_distance
-from matplotlib import pyplot as plt
+import package_name.utils.util_plotting as plot
 
 def run_simulation(network:Network, database:Database, f: float,
                    gender=True, age=True, ethnicity=True, SES=True,
@@ -84,20 +83,36 @@ def run_simulation(network:Network, database:Database, f: float,
     # Get resulting information
     dists_neighborhoods_t1 = database.get_dist_per_neighborhood()
     dem_grp_avg_t1 = database.get_demographic_average_distance()
+    xs, ys = database.obtain_generated_pts()
+
     # Add points + lost data
 
     ###########################################################################
     # Visualization ###########################################################
     ###########################################################################
 
-    plot_demographic_average_distance(df=dem_grp_avg_t0,
-                                      title="Before transformation",
+    city = database.city
+
+    # Bar diagraph before transformation
+    plot.plot_demographic_average_distance(df=dem_grp_avg_t0,
+                                      title=f"{city} before transformation",
                                       storage_folder="results",
-                                      name="Before transformation")
-    plot_demographic_average_distance(df=dem_grp_avg_t1,
-                                      title="After transformation",
+                                      name=f"{city} before transformation")
+
+    # Bar diagraph after transformation
+    plot.plot_demographic_average_distance(df=dem_grp_avg_t1,
+                                      title=f"{city} after transformation",
+                                      subtitle=f"Neighborhoods lost: {database.lost} ({round((database.lost / database.num_buurten) * 100, 2)})%",
                                       storage_folder="results",
-                                      name="After transformation")
+                                      name=f"{city} after transformation")
+
+    # Generated points
+    plot.plot_points(xs, ys,
+                     title='Generated points',
+                     subtitle=f'Number of points: {xs.size}',
+                     storage_folder='results',
+                     name=f'generated points: {city}')
+
 
 
     # print("dists_neighborhoods_t0")

@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import os
 
 
-def plot_demographic_average_distance(df: pd.DataFrame, title='Average Distance per Group', storage_folder='.', name='bar_diagraph'):
+def plot_demographic_average_distance(df: pd.DataFrame, title='Average Distance per Group', subtitle='', storage_folder='.', name='bar_diagraph'):
     """
     ### Description
         This function creates a bar diagraph of the demographic average distance dataframe
@@ -33,12 +33,13 @@ def plot_demographic_average_distance(df: pd.DataFrame, title='Average Distance 
     # Creating bar diagraph
     fig, ax = plt.subplots()
     ax.bar(df["dem_grp"], df["avg_dist"])
-    ax.axhline(y=avg)
+    ax.axhline(y=avg, color='red')
 
     # Setting labels
     ax.set_xlabel("Demographic Groups")
     ax.set_ylabel("Average Distance")
-    ax.set_title(title)
+    plt.suptitle(title)
+    plt.title(subtitle, fontsize=8)
     ax.tick_params(axis='x', which='major', pad=5)
     plt.xticks(rotation=90)
     plt.tight_layout()
@@ -48,3 +49,18 @@ def plot_demographic_average_distance(df: pd.DataFrame, title='Average Distance 
         os.makedirs(storage_folder)
 
     fig.savefig(os.path.join(storage_folder, name + '.svg'))
+
+def plot_points(xs, ys, title='Average Distance per Group', subtitle='', storage_folder='.', name='bar_diagraph'):
+    # Create figure
+    fig = plt.figure()
+    plt.scatter(xs, ys, s=0.5, edgecolors='none')
+
+    # Labels
+    plt.suptitle(title)
+    plt.title(subtitle, fontsize=8)
+
+    # Save bar-diagraph
+    if not os.path.isdir(storage_folder):
+        os.makedirs(storage_folder)
+    fig.savefig(os.path.join(storage_folder, name + '.svg'))
+

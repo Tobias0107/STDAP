@@ -609,8 +609,22 @@ class Database:
         # Total neighborhoods.
         self.num_buurten = self.conn.sql("SELECT count(id) FROM Neighborhoods").fetchone()[0] # type: ignore
         # Total lost
-        self.lost = self.num_buurten - self.conn.sql("SELECT count(neighborhood_id) FROM Neighborhood_pts").fetchone()[0] # type: ignore
+        self.lost = self.num_buurten - self.conn.sql("SELECT count(neighborhood_id) FROM (SELECT DISTINCT neighborhood_id FROM Neighborhood_pts)").fetchone()[0] # type: ignore
 
+    def obtain_generated_pts(self):
+        """
+        ### Expects:
+            - create_pts_per_neighborhood run
+        ### Parameters:
+            - None
+        ### Returns:
+            - (xs, ys)\n
+                Here xs and ys are numpy arrays containing the x and y coordinates of the points respectively
+        ### Side-efects:
+            - None
+        """
+        arrow = self.conn.sql(""" SELECT ST_X(pt) AS x, ST_Y(pt) AS y FROM Neighborhood_pts """).to_arrow_table()
+        return (arrow.column("x").to_numpy(), arrow.column("y").to_numpy())
 
     def remove_f_edges(self, fraction: float, use_population=True, use_amenity=False):
         """
