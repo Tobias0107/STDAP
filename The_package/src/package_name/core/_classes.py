@@ -835,7 +835,13 @@ class Database:
             ON pt.node_id = d.node_id
             GROUP BY pt.neighborhood_id
         """)
-        return self.conn.sql("SELECT * FROM Dist_per_neighborhood").df()
+        return self.conn.sql("""
+            SELECT n.regio, d.*
+            FROM Dist_per_neighborhood d
+            JOIN Neighborhoods n
+            ON n.id = d.neighborhood_id
+            ORDER BY d.avg_dist DESC
+            """).df()
 
     def get_demographic_average_distance(self):
         """

@@ -102,7 +102,6 @@ class simulator:
             "this simulation, call 'choose_city' first. For details, see manual.")
 
         return Sim_trans_dist.run_simulation(self.network, self.database, fraction,
-                                             gender, age, ethnicity, SES,
                                              save_old_network, save_new_network,
                                              color_new_network, save_bar_diagram,
                                              print_progress, saving_dir="results_sim_transit_dist/")
