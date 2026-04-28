@@ -105,7 +105,7 @@ def plot_points(xs: np.ndarray, ys: np.ndarray, title='Average Distance per Grou
     if xs.size < 5000:
         fig.savefig(os.path.join(storage_folder, name + '.svg'), format='svg')
     else:
-        fig.savefig(os.path.join(storage_folder, name + '.png'), format='png')
+        fig.savefig(os.path.join(storage_folder, name + '.png'), format='png', dpi=500)
 
 
 def bar_dist_per_neighborhood(df: gpd.GeoDataFrame, title='Average Distance per Neighborhood', subtitle='', storage_folder='.', name='dist_per_neighborhood'):
@@ -151,7 +151,7 @@ def bar_dist_per_neighborhood(df: gpd.GeoDataFrame, title='Average Distance per 
     fig.savefig(os.path.join(storage_folder, name + '.svg'))
 
 
-def colored_network(gdf: gpd.GeoDataFrame, graph: nx.MultiDiGraph, title='Average Distance per Neighborhood', subtitle='', storage_folder='.', name='dist_per_neighborhood'):
+def colored_network(gdf: gpd.GeoDataFrame, graph: nx.MultiDiGraph, title='Average Distance per Neighborhood', subtitle='', storage_folder='.', name='dist_per_neighborhood', svg=True):
     """
     ### Description
         This function creates a colored network image with the data
@@ -178,6 +178,8 @@ def colored_network(gdf: gpd.GeoDataFrame, graph: nx.MultiDiGraph, title='Averag
             The folder to store the bar diagraph.\
         - name: \n
             The name of the bar diagraph (file)
+        - svg: \n
+            If True: Uses svg format. Otherwise png format.
     ### Returns
         - None
     ### Side-effects
@@ -213,4 +215,7 @@ def colored_network(gdf: gpd.GeoDataFrame, graph: nx.MultiDiGraph, title='Averag
     if not os.path.isdir(storage_folder):
         os.makedirs(storage_folder)
 
-    fig.savefig(os.path.join(storage_folder, name + '.svg'))
+    if svg:
+        fig.savefig(os.path.join(storage_folder, name + '.svg'))
+    else:
+        fig.savefig(os.path.join(storage_folder, name + '.png'), dpi=500)

@@ -615,6 +615,8 @@ class Database:
         })
 
         # Import dataframe to duckdb
+        # Remove pts outside neighborhood
+        # Points linked to ped_network by closest node within transit_max_pts_dist
         self.conn.sql(f"""
             INSERT INTO Neighborhood_pts (neighborhood_id, pt, node_id)
             SELECT pt.ids, ST_Point(pt.xs, pt.ys), ped.osmid
