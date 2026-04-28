@@ -12,6 +12,9 @@ import matplotlib as mpl
 import os
 import numpy as np
 
+from package_name.config.settings import get_settings
+settings = get_settings()
+
 
 def bar_demographic_average_distance(df: pd.DataFrame, title='Average Distance per Group', subtitle='', storage_folder='.', name='dist_per_dem_grp'):
     """
@@ -105,7 +108,7 @@ def plot_points(xs: np.ndarray, ys: np.ndarray, title='Average Distance per Grou
     if xs.size < 5000:
         fig.savefig(os.path.join(storage_folder, name + '.svg'), format='svg')
     else:
-        fig.savefig(os.path.join(storage_folder, name + '.png'), format='png', dpi=500)
+        fig.savefig(os.path.join(storage_folder, name + '.png'), format='png', dpi=settings.png_dpi)
 
 
 def bar_dist_per_neighborhood(df: gpd.GeoDataFrame, title='Average Distance per Neighborhood', subtitle='', storage_folder='.', name='dist_per_neighborhood'):
@@ -189,7 +192,7 @@ def colored_network(gdf: gpd.GeoDataFrame, graph: nx.MultiDiGraph, title='Averag
     vals = gdf['avg_dist']
     v_min, v_max = vals.min(), vals.max()
     norm = plt.Normalize(v_min, v_max) # type: ignore
-    cmap = mpl.colormaps['viridis_r']
+    cmap = mpl.colormaps[settings.colormap]
 
     # Add use Colormap to determine the color for every neighborhood
     gdf['color'] = gdf['avg_dist'].apply(lambda x: cmap(norm(x)))
@@ -218,4 +221,4 @@ def colored_network(gdf: gpd.GeoDataFrame, graph: nx.MultiDiGraph, title='Averag
     if svg:
         fig.savefig(os.path.join(storage_folder, name + '.svg'))
     else:
-        fig.savefig(os.path.join(storage_folder, name + '.png'), dpi=500)
+        fig.savefig(os.path.join(storage_folder, name + '.png'), dpi=settings.png_dpi)

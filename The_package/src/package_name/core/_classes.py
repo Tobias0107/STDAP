@@ -645,7 +645,7 @@ class Database:
         ### Returns:
             - (xs, ys)\n
                 Here xs and ys are numpy arrays containing the x and y coordinates of the points respectively
-        ### Side-efects:
+        ### Side-effects:
             - None
         """
         arrow = self.conn.sql(""" SELECT ST_X(pt) AS x, ST_Y(pt) AS y FROM Neighborhood_pts """).to_arrow_table()

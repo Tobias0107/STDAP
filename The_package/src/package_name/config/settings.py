@@ -8,9 +8,10 @@
 """
 
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import Callable
 import numpy as np
+import pandas as pd
 
 
 import package_name.config.functions as functions
@@ -21,6 +22,11 @@ class Settings:
         default=0,
         metadata={"description": "Here the description"}
     )
+
+    ###########################################################################
+    ##################### Data importation settings ###########################
+    ###########################################################################
+
     dataset_column_names: dict[str, str] = field (
         default_factory = lambda: {
             "id": "gwb_code",
@@ -74,6 +80,11 @@ class Settings:
         default=',',
         metadata={"description": "The separating character when reading floats from csv files."}
     )
+
+    ###########################################################################
+    ##################### Simulation settings #################################
+    ###########################################################################
+
     neighborhood_distribution: Callable[[float, float, float, float], np.typing.NDArray[np.float64]] = field(
         default=functions.Poisson_distribution,
         metadata= {"description": "Given the upper and lower bounds of the "\
@@ -114,6 +125,51 @@ class Settings:
                   "to be merged, and obtain the nodes in the driving network accessible by the"
                   "pedestrian network."}
     )
+
+    ###########################################################################
+    ##################### Visualization settings ##############################
+    ###########################################################################
+
+    png_dpi: int = field(
+        default=500,
+        metadata={"description": "The dpi used when generating visualizations using the 'png' format."}
+    )
+    colormap: str = field(
+        default='viridis_r',
+        metadata={"description": "The colormap used to color the networks based on distance."
+                  "Should be a valid matplotlib colormap"}
+    )
+
+
+    ###########################################################################
+    ##################### Class methods #######################################
+    ###########################################################################
+
+    def describe(self):
+        """
+            Returns string representation of settings, including per field descriptions.
+        """
+        lines = ''
+        for f in fields(self):
+            name = f.name
+            value = getattr(self, name)
+            description = f.metadata.get("description", "")
+            default = f.default
+
+            lines += f"{name} = {value} (default: {default})\nDescription: {description}\n\n"
+
+        return lines
+
+    def to_df(self) -> pd.DataFrame:
+        rows = []
+        for f in fields(self):
+            rows.append({
+                "name": f.name,
+                "value": getattr(self, f.name),
+                "default": f.default,
+                "description": f.metadata.get("description", "")
+            })
+        return pd.DataFrame(rows)
 
 
 _settings = Settings()
