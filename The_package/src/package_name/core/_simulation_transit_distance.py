@@ -148,14 +148,42 @@ def run_simulation(network:Network, database:Database, f: float,
                                     storage_folder=saving_dir,
                                     name=f"dist_per_neighborhood_afterwards_{city}")
 
-    # Difference between the networks
-    
-
     # both networks beforehand
     plot.colored_network(dists_neighborhoods_t0, network.graph_drive,
-                         title=f"Car-accessible network {city}",
+                         title=f"Car-accessible network {city} beforehand",
                          subtitle='',
                          storage_folder=saving_dir,
-                         name=f"colored_network_t0_{city}")
+                         name=f"colored_network_t0_{city}_beforehand")
+
+    # plot.colored_network(dists_neighborhoods_t0, network.graph_pedestrian,
+    #                      title=f"Pedestrian network {city} beforehand",
+    #                      subtitle='',
+    #                      storage_folder=saving_dir,
+    #                      name=f"colored_network_t0_{city}_beforehand")
 
     # both networks afterwards
+    plot.colored_network(dists_neighborhoods_t1, network.graph_drive,
+                         title=f"Car-accessible network {city} afterwards",
+                         subtitle='',
+                         storage_folder=saving_dir,
+                         name=f"colored_network_t0_{city}_afterwards")
+
+    # plot.colored_network(dists_neighborhoods_t1, network.graph_pedestrian,
+    #                      title=f"Pedestrian network {city} afterwards",
+    #                      subtitle='',
+    #                      storage_folder=saving_dir,
+    #                      name=f"colored_network_t0_{city}_afterwards")
+
+    # The difference between the two
+    # dists_neighborhoods_t1['avg_dist'] = dists_neighborhoods_t0['avg_dist'] - dists_neighborhoods_t1['avg_dist']
+    # plot.colored_network(dists_neighborhoods_t1, network.graph_drive,
+    #                      title=f"Car-accessible network {city} difference",
+    #                      subtitle='beforehand - afterwards',
+    #                      storage_folder=saving_dir,
+    #                      name=f"colored_network_t0_{city}_afterwards")
+
+    # plot.colored_network(dists_neighborhoods_t1, network.graph_pedestrian,
+    #                      title=f"Pedestrian network {city} difference",
+    #                      subtitle='beforehand - afterwards',
+    #                      storage_folder=saving_dir,
+    #                      name=f"colored_network_t0_{city}_afterwards")

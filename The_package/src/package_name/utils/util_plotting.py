@@ -7,6 +7,8 @@ import networkx as nx
 import pandas as pd
 import geopandas as gpd
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import matplotlib as mpl
 import os
 import numpy as np
 
@@ -181,19 +183,34 @@ def colored_network(gdf: gpd.GeoDataFrame, graph: nx.MultiDiGraph, title='Averag
     ### Side-effects
         - Stores a svg of the plot on given location.
     """
-    # Project both graph and gdf (for insurance)
-    gdf = ox.projection.project_gdf(gdf, to_crs='epsg:28992')
-    graph = ox.project_graph(graph, to_crs='epsg:28992')
-
-    # Create color field in DataFrame with the color for every neighborhood
-    v_min, v_max = gdf['avg_dist'].min(), gdf['avg_dist'].max()
+    # Create Colormap
+    vals = gdf['avg_dist']
+    v_min, v_max = vals.min(), vals.max()
     norm = plt.Normalize(v_min, v_max) # type: ignore
-    cmap = plt.get_cmap('viridis')
+    cmap = mpl.colormaps['viridis_r']
+
+    # Add use Colormap to determine the color for every neighborhood
     gdf['color'] = gdf['avg_dist'].apply(lambda x: cmap(norm(x)))
 
     # Plot the neighborhood colors
-    fig, ax = ox.plot_footprints(gdf, color=gdf['color'], edge_color='black', alpha=0.7, show=False, close=False) # type: ignore
+    fig, ax = ox.plot_footprints(gdf, color=gdf['color'], edge_color='black', alpha=0.4, show=False, close=False) # type: ignore
 
     # Plot the network
     fig, ax = ox.plot_graph(graph, ax=ax, node_size=0, edge_color='white', edge_linewidth=0.5, show=False, close=False)
 
+    # Create the color-bar used for the legenda
+    sm = cm.ScalarMappable(norm=norm, cmap=cmap)
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=ax, orientation='vertical', pad=0.02, shrink=0.8)
+
+    # Create the labels for the legenda
+    tick_values = np.linspace(v_min, v_max, num=5)
+    cbar.set_ticks(tick_values)
+    cbar.set_ticklabels([str(int(x)) for x in tick_values])
+    cbar.set_label('Average Distance', fontsize=10)
+
+    # Save bar-diagraph
+    if not os.path.isdir(storage_folder):
+        os.makedirs(storage_folder)
+
+    fig.savefig(os.path.join(storage_folder, name + '.svg'))
