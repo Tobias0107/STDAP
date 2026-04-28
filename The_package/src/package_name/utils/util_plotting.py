@@ -5,6 +5,7 @@
 import osmnx as ox
 import networkx as nx
 import pandas as pd
+import geopandas as gpd
 import matplotlib.pyplot as plt
 import os
 import numpy as np
@@ -105,15 +106,15 @@ def plot_points(xs: np.ndarray, ys: np.ndarray, title='Average Distance per Grou
         fig.savefig(os.path.join(storage_folder, name + '.png'), format='png')
 
 
-def bar_dist_per_neighborhood(df: pd.DataFrame, title='Average Distance per Neighborhood', subtitle='', storage_folder='.', name='dist_per_neighborhood'):
+def bar_dist_per_neighborhood(df: gpd.GeoDataFrame, title='Average Distance per Neighborhood', subtitle='', storage_folder='.', name='dist_per_neighborhood'):
     """
     ### Description
         This function creates a bar diagraph of the distance per neighborhood
-        as is returned by the database.get_demographic_average_distance()
+        as is returned by the database.get_dist_per_neighborhood()
         Creates a red horizontal line for the average.
     ### Parameters:
         - df: \n
-            The dataframe, as is returned by the database.get_demographic_average_distance()
+            The dataframe, as is returned by the database.get_dist_per_neighborhood()
         - title: \n
             The title of the figure
         - subtitle: \n
@@ -130,7 +131,7 @@ def bar_dist_per_neighborhood(df: pd.DataFrame, title='Average Distance per Neig
 
     # Creating bar diagraph
     fig, ax = plt.subplots()
-    ax.bar(df["regio"], df["avg_dist"], color='lightgrey', rasterized=True)
+    ax.bar(df["neighborhood"], df["avg_dist"], color='lightgrey', rasterized=True)
 
     # Setting labels
     ax.set_xlabel("Neighborhoods")
@@ -146,3 +147,53 @@ def bar_dist_per_neighborhood(df: pd.DataFrame, title='Average Distance per Neig
         os.makedirs(storage_folder)
 
     fig.savefig(os.path.join(storage_folder, name + '.svg'))
+
+
+def colored_network(gdf: gpd.GeoDataFrame, graph: nx.MultiDiGraph, title='Average Distance per Neighborhood', subtitle='', storage_folder='.', name='dist_per_neighborhood'):
+    """
+    ### Description
+        This function creates a colored network image with the data
+        as is returned by the database.get_dist_per_neighborhood()
+        and the given network.
+        Colors the neighborhoods in the network based on the average calculated
+        new distance one has to travel to transit:
+            Red = Big increase (relative to other neighborhoods)
+            Orange = Small increase (relative to other neighborhoods)
+            Yellow = Practically remains the same
+            Light green = Distance is slightly decreased
+            Dark green = Distance is greatly decreased
+    ### Parameters:
+        - df: \n
+            The dataframe, as is returned by the database.get_dist_per_neighborhood().
+            Used to color the neighborhoods.
+        - network: \n
+            The network to use as the base of the network image
+        - title: \n
+            The title of the figure
+        - subtitle: \n
+            The subtitle of the figure
+        - storage_folder: \n
+            The folder to store the bar diagraph.\
+        - name: \n
+            The name of the bar diagraph (file)
+    ### Returns
+        - None
+    ### Side-effects
+        - Stores a svg of the plot on given location.
+    """
+    # Project both graph and gdf (for insurance)
+    gdf = ox.projection.project_gdf(gdf, to_crs='epsg:28992')
+    graph = ox.project_graph(graph, to_crs='epsg:28992')
+
+    # Create color field in DataFrame with the color for every neighborhood
+    v_min, v_max = gdf['avg_dist'].min(), gdf['avg_dist'].max()
+    norm = plt.Normalize(v_min, v_max) # type: ignore
+    cmap = plt.get_cmap('viridis')
+    gdf['color'] = gdf['avg_dist'].apply(lambda x: cmap(norm(x)))
+
+    # Plot the neighborhood colors
+    fig, ax = ox.plot_footprints(gdf, color=gdf['color'], edge_color='black', alpha=0.7, show=False, close=False) # type: ignore
+
+    # Plot the network
+    fig, ax = ox.plot_graph(graph, ax=ax, node_size=0, edge_color='white', edge_linewidth=0.5, show=False, close=False)
+

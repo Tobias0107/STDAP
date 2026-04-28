@@ -138,7 +138,7 @@ def run_simulation(network:Network, database:Database, f: float,
                                     title=f"Distances per neighborhood in {city} beforehand",
                                     subtitle='',
                                     storage_folder=saving_dir,
-                                    name="dist_per_neighborhood_beforehand")
+                                    name=f"dist_per_neighborhood_beforehand_{city}")
 
     # Bar diagraphs of distances per neighborhood afterwards
     if print_progress: print("Plotting distances per neighborhood afterwards (bar diagraph)")
@@ -146,8 +146,16 @@ def run_simulation(network:Network, database:Database, f: float,
                                     title=f"Distances per neighborhood in {city} afterwards",
                                     subtitle='',
                                     storage_folder=saving_dir,
-                                    name="dist_per_neighborhood_afterwards")
+                                    name=f"dist_per_neighborhood_afterwards_{city}")
+
+    # Difference between the networks
+    
 
     # both networks beforehand
+    plot.colored_network(dists_neighborhoods_t0, network.graph_drive,
+                         title=f"Car-accessible network {city}",
+                         subtitle='',
+                         storage_folder=saving_dir,
+                         name=f"colored_network_t0_{city}")
 
     # both networks afterwards

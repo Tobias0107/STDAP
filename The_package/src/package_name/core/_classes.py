@@ -16,6 +16,7 @@ import pandas as pd
 import numpy as np
 import geopandas as gpd
 import pyarrow as pa
+from shapely import wkb
 
 
 # Importing helper functions from utils
@@ -821,8 +822,8 @@ class Database:
         ### Parameters:
             - None
         ### Returns:
-            - pandas dataframe:\n
-                (neighborhood, avg_dist)
+            - geopandas GeoDataFrame:\n
+                (neighborhood, WKB, neighborhood_id, avg_dist)
         ### Side-effects:
             - (Re)creates table Dist_per_neighborhood
         """
@@ -835,13 +836,15 @@ class Database:
             ON pt.node_id = d.node_id
             GROUP BY pt.neighborhood_id
         """)
-        return self.conn.sql("""
-            SELECT n.regio, d.*
+        df = self.conn.sql("""
+            SELECT n.regio AS neighborhood, ST_AsWKB(n.geometry) AS wkb, d.*
             FROM Dist_per_neighborhood d
             JOIN Neighborhoods n
             ON n.id = d.neighborhood_id
             ORDER BY d.avg_dist DESC
             """).df()
+        df['geometry'] = df['wkb'].apply(lambda x: wkb.loads(bytes(x))) # type: ignore
+        return gpd.GeoDataFrame(df, geometry='geometry', crs='epsg:28992')
 
     def get_demographic_average_distance(self):
         """
