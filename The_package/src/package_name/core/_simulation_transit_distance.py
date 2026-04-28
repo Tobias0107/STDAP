@@ -75,7 +75,6 @@ def run_simulation(network:Network, database:Database, f: float,
     if print_progress: print("Linking bus_stations to the network")
     database.link_busses()
 
-
     # Run simulation
     if print_progress: print("Calculating walking distances to public transit")
     database.calculate_distances_to_nearest_transit()
@@ -138,7 +137,7 @@ def run_simulation(network:Network, database:Database, f: float,
                                     title=f"Distances per neighborhood in {city} beforehand",
                                     subtitle='',
                                     storage_folder=saving_dir,
-                                    name=f"dist_per_neighborhood_beforehand_{city}")
+                                    name=f"Distances per neighborhood in {city} beforehand")
 
     # Bar diagraphs of distances per neighborhood afterwards
     if print_progress: print("Plotting distances per neighborhood afterwards (bar diagraph)")
@@ -146,44 +145,50 @@ def run_simulation(network:Network, database:Database, f: float,
                                     title=f"Distances per neighborhood in {city} afterwards",
                                     subtitle='',
                                     storage_folder=saving_dir,
-                                    name=f"dist_per_neighborhood_afterwards_{city}")
+                                    name=f"Distances per neighborhood in {city} afterwards")
 
     # both networks beforehand
+    if print_progress: print("Creating colored graphs beforehand: car-accessible")
     plot.colored_network(dists_neighborhoods_t0, network.graph_drive,
                          title=f"Car-accessible network {city} beforehand",
                          subtitle='',
                          storage_folder=saving_dir,
-                         name=f"colored_network_t0_{city}_beforehand")
+                         name=f"Car-accessible network {city} beforehand")
 
-    # plot.colored_network(dists_neighborhoods_t0, network.graph_pedestrian,
-    #                      title=f"Pedestrian network {city} beforehand",
-    #                      subtitle='',
-    #                      storage_folder=saving_dir,
-    #                      name=f"colored_network_t0_{city}_beforehand")
+    if print_progress: print("Creating colored graphs beforehand: pedestrian")
+    plot.colored_network(dists_neighborhoods_t0, network.graph_pedestrian,
+                         title=f"Pedestrian network {city} beforehand",
+                         subtitle='',
+                         storage_folder=saving_dir,
+                         name=f"Pedestrian network {city} beforehand")
 
     # both networks afterwards
+    if print_progress: print("Creating colored graphs afterwards: car-accessible")
     plot.colored_network(dists_neighborhoods_t1, network.graph_drive,
                          title=f"Car-accessible network {city} afterwards",
                          subtitle='',
                          storage_folder=saving_dir,
-                         name=f"colored_network_t0_{city}_afterwards")
+                         name=f"Car-accessible network {city} afterwards")
 
-    # plot.colored_network(dists_neighborhoods_t1, network.graph_pedestrian,
-    #                      title=f"Pedestrian network {city} afterwards",
-    #                      subtitle='',
-    #                      storage_folder=saving_dir,
-    #                      name=f"colored_network_t0_{city}_afterwards")
+    if print_progress: print("Creating colored graphs afterwards: pedestrian")
+    plot.colored_network(dists_neighborhoods_t1, network.graph_pedestrian,
+                         title=f"Pedestrian network {city} afterwards",
+                         subtitle='',
+                         storage_folder=saving_dir,
+                         name=f"Pedestrian network {city} afterwards")
 
     # The difference between the two
-    # dists_neighborhoods_t1['avg_dist'] = dists_neighborhoods_t0['avg_dist'] - dists_neighborhoods_t1['avg_dist']
-    # plot.colored_network(dists_neighborhoods_t1, network.graph_drive,
-    #                      title=f"Car-accessible network {city} difference",
-    #                      subtitle='beforehand - afterwards',
-    #                      storage_folder=saving_dir,
-    #                      name=f"colored_network_t0_{city}_afterwards")
+    if print_progress: print("Creating colored graphs about the difference before and after: car-accessible")
+    dists_neighborhoods_t1['avg_dist'] = dists_neighborhoods_t0['avg_dist'] - dists_neighborhoods_t1['avg_dist']
+    plot.colored_network(dists_neighborhoods_t1, network.graph_drive,
+                         title=f"Car-accessible network {city} difference",
+                         subtitle='beforehand - afterwards',
+                         storage_folder=saving_dir,
+                         name=f"Car-accessible network {city} difference")
 
-    # plot.colored_network(dists_neighborhoods_t1, network.graph_pedestrian,
-    #                      title=f"Pedestrian network {city} difference",
-    #                      subtitle='beforehand - afterwards',
-    #                      storage_folder=saving_dir,
-    #                      name=f"colored_network_t0_{city}_afterwards")
+    if print_progress: print("Creating colored graphs about the difference before and after: pedestrian")
+    plot.colored_network(dists_neighborhoods_t1, network.graph_pedestrian,
+                         title=f"Pedestrian network {city} difference",
+                         subtitle='beforehand - afterwards',
+                         storage_folder=saving_dir,
+                         name=f"Pedestrian network {city} difference")

@@ -55,6 +55,7 @@ class Network:
             self.graph_pedestrian = ox.io.load_graphml(f"{self.path}_ped.graphml")
         else:
             self.graph_pedestrian = get_graph(city, network_type="walk")
+            self.graph_pedestrian.add_nodes_from(self.graph_drive.nodes(data=True))
             if store_in_file:
                 ox.io.save_graphml(self.graph_pedestrian, f"{self.path}_ped.graphml")
 
@@ -90,11 +91,25 @@ class Network:
 
     def transform_edges(self, ebunch):
         """
-            Given a list of tuples (u, v) or (u, v, key).
+            Given a list of tuples (u, v, key).
             Removes the edges from the driving network
             and adds them to the pedestrian network
         """
+        # For every edge, obtain the data
+        edges_to_add = []
+        for (u, v, k) in ebunch:
+            data = self.graph_drive.get_edge_data(u, v, k)
+            edges_to_add.append((u, v, data))
+
+        # Transform edges
         self.graph_drive.remove_edges_from(ebunch)
+        self.graph_pedestrian.add_edges_from(edges_to_add)
+
+    def add_edges_to_ped_network(self, ebunch):
+        """
+            Given a list of tuples (u, v).
+            and adds them to the pedestrian network
+        """
         self.graph_pedestrian.add_edges_from(ebunch)
 
     def build_r5_network(self, osm_pbf_path: str, gtfs_files: list):
@@ -442,6 +457,13 @@ class Database:
             ON ST_DWithin(p.geometry, n.loc, {settings.max_dist_ped_transit})
         """)
 
+        # Add edges between drive network en pedestrian network
+        df = self.conn.sql("""
+            SELECT id, pedestrian_node_id
+            FROM Graph_nodes_accessible
+        """).df()
+        ebunch = df.itertuples(index=False, name=None)
+        self.network.add_edges_to_ped_network(ebunch)
 
     def obtain_features(self, amenity=True, public_transport=True):
         """

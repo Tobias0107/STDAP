@@ -1,2 +1,3 @@
 # Nested gitignore for specific points
 *cache*
+*results_sim_transit_dist*
