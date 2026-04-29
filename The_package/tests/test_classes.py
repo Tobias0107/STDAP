@@ -54,7 +54,7 @@ class TestDatabase:
         database.get_dist_per_neighborhood()
 
     def test_get_demographic_average_increase(self):
-        database.get_demographic_average_distance().to_csv("tmp.results.csv")
+        database.get_demographic_average_distance()
 
     def test_show_database(self):
         database.to_csv(limit=1000000)

@@ -12,6 +12,7 @@ from dataclasses import dataclass, field, fields
 from typing import Callable
 import numpy as np
 import pandas as pd
+import matplotlib.colors as mcolor
 
 
 import package_name.config.functions as functions
@@ -139,6 +140,15 @@ class Settings:
         metadata={"description": "The colormap used to color the networks based on distance."
                   "Should be a valid matplotlib colormap"}
     )
+    color_normalization: Callable[..., mcolor.Normalize] = field(
+        default=mcolor.LogNorm,
+        metadata={"description": ""}
+    )
+    legend_num_labels: int = field(
+        default=10,
+        metadata={"description": "The number of numbers to show on the colorbar legend when"\
+                  "plotting the colored network."}
+    )
 
 
     ###########################################################################
@@ -182,7 +192,3 @@ def get_settings() -> Settings:
 def reset_settings():
     global _settings
     _settings = Settings()
-
-
- 
-

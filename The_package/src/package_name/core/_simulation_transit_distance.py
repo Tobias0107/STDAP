@@ -7,8 +7,6 @@ from package_name.core._classes import Database, Network
 import package_name.utils.util_plotting as plot
 
 def run_simulation(network:Network, database:Database, f: float,
-                   save_old_network=True, save_new_network=True,
-                   color_new_network=True, save_bar_diagram=True,
                    print_progress=True, saving_dir="results_sim_transit_dist/"):
     """
         ### Expects:
@@ -184,11 +182,13 @@ def run_simulation(network:Network, database:Database, f: float,
                          title=f"Car-accessible network {city} difference",
                          subtitle='beforehand - afterwards',
                          storage_folder=saving_dir,
-                         name=f"Car-accessible network {city} difference")
+                         name=f"Car-accessible network {city} difference",
+                         force_linear=True)
 
     if print_progress: print("Creating colored graphs about the difference before and after: pedestrian")
     plot.colored_network(dists_neighborhoods_t1, network.graph_pedestrian,
                          title=f"Pedestrian network {city} difference",
                          subtitle='beforehand - afterwards',
                          storage_folder=saving_dir,
-                         name=f"Pedestrian network {city} difference")
+                         name=f"Pedestrian network {city} difference",
+                         force_linear=True)

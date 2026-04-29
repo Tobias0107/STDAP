@@ -154,7 +154,7 @@ def bar_dist_per_neighborhood(df: gpd.GeoDataFrame, title='Average Distance per 
     fig.savefig(os.path.join(storage_folder, name + '.svg'))
 
 
-def colored_network(gdf: gpd.GeoDataFrame, graph: nx.MultiDiGraph, title='Average Distance per Neighborhood', subtitle='', storage_folder='.', name='dist_per_neighborhood', svg=True):
+def colored_network(gdf: gpd.GeoDataFrame, graph: nx.MultiDiGraph, title='Average Distance per Neighborhood', subtitle='', storage_folder='.', name='dist_per_neighborhood', svg=True, force_linear=False):
     """
     ### Description
         This function creates a colored network image with the data
@@ -191,7 +191,10 @@ def colored_network(gdf: gpd.GeoDataFrame, graph: nx.MultiDiGraph, title='Averag
     # Create Colormap
     vals = gdf['avg_dist']
     v_min, v_max = vals.min(), vals.max()
-    norm = plt.Normalize(v_min, v_max) # type: ignore
+    if force_linear:
+        norm = plt.Normalize(v_min, v_max) # type: ignore
+    else:
+        norm = settings.color_normalization(v_min, v_max) # type: ignore
     cmap = mpl.colormaps[settings.colormap]
 
     # Add use Colormap to determine the color for every neighborhood
@@ -209,7 +212,9 @@ def colored_network(gdf: gpd.GeoDataFrame, graph: nx.MultiDiGraph, title='Averag
     cbar = fig.colorbar(sm, ax=ax, orientation='vertical', pad=0.02, shrink=0.8)
 
     # Create the labels for the legenda
-    tick_values = np.linspace(v_min, v_max, num=5)
+    u = np.linspace(0, 1, num=settings.legend_num_labels)
+    tick_values = norm.inverse(u).tolist()
+    # tick_values = np.linspace(v_min, v_max, num=5)
     cbar.set_ticks(tick_values)
     cbar.set_ticklabels([str(int(x)) for x in tick_values])
     cbar.set_label('Average Distance', fontsize=10)
