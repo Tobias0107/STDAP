@@ -51,3 +51,10 @@
   - Color neighborhoods by increase/decrease in distance.
  + Bar diagram with bar for every demographic groups average increase/decrease in distance.
  + Something showing network fragmentation
+
+
+=== Optimizations:
+- Remove points not in a neighborhood
+- Remove points not close to pedestrian network (nobody lives there)
+- Link ped network and drive network using max-dist (create edges ped network for this)
+- 

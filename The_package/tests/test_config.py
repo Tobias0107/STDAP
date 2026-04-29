@@ -6,13 +6,20 @@ from package_name.config.settings import get_settings
 import package_name.config.functions as functions
 import matplotlib.pyplot as plt
 
+settings = get_settings()
+
 class TestSettings:
     """
         This class contains the tests for config/settings.py
     """
     def test_repr(self):
-        settings = get_settings()
         print(settings)
+
+    def test_describe(self):
+        print(settings.describe())
+
+    def test_to_df(self):
+        print(settings.to_df())
 
 
 class TestConfigFuncs:

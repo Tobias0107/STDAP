@@ -16,6 +16,7 @@ import pandas as pd
 import numpy as np
 import geopandas as gpd
 import pyarrow as pa
+from shapely import wkb
 
 
 # Importing helper functions from utils
@@ -54,6 +55,7 @@ class Network:
             self.graph_pedestrian = ox.io.load_graphml(f"{self.path}_ped.graphml")
         else:
             self.graph_pedestrian = get_graph(city, network_type="walk")
+            self.graph_pedestrian.add_nodes_from(self.graph_drive.nodes(data=True))
             if store_in_file:
                 ox.io.save_graphml(self.graph_pedestrian, f"{self.path}_ped.graphml")
 
@@ -89,11 +91,25 @@ class Network:
 
     def transform_edges(self, ebunch):
         """
-            Given a list of tuples (u, v) or (u, v, key).
+            Given a list of tuples (u, v, key).
             Removes the edges from the driving network
             and adds them to the pedestrian network
         """
+        # For every edge, obtain the data
+        edges_to_add = []
+        for (u, v, k) in ebunch:
+            data = self.graph_drive.get_edge_data(u, v, k)
+            edges_to_add.append((u, v, data))
+
+        # Transform edges
         self.graph_drive.remove_edges_from(ebunch)
+        self.graph_pedestrian.add_edges_from(edges_to_add)
+
+    def add_edges_to_ped_network(self, ebunch):
+        """
+            Given a list of tuples (u, v).
+            and adds them to the pedestrian network
+        """
         self.graph_pedestrian.add_edges_from(ebunch)
 
     def build_r5_network(self, osm_pbf_path: str, gtfs_files: list):
@@ -441,6 +457,13 @@ class Database:
             ON ST_DWithin(p.geometry, n.loc, {settings.max_dist_ped_transit})
         """)
 
+        # Add edges between drive network en pedestrian network
+        df = self.conn.sql("""
+            SELECT id, pedestrian_node_id
+            FROM Graph_nodes_accessible
+        """).df()
+        ebunch = df.itertuples(index=False, name=None)
+        self.network.add_edges_to_ped_network(ebunch)
 
     def obtain_features(self, amenity=True, public_transport=True):
         """
@@ -592,6 +615,8 @@ class Database:
         })
 
         # Import dataframe to duckdb
+        # Remove pts outside neighborhood
+        # Points linked to ped_network by closest node within transit_max_pts_dist
         self.conn.sql(f"""
             INSERT INTO Neighborhood_pts (neighborhood_id, pt, node_id)
             SELECT pt.ids, ST_Point(pt.xs, pt.ys), ped.osmid
@@ -609,8 +634,22 @@ class Database:
         # Total neighborhoods.
         self.num_buurten = self.conn.sql("SELECT count(id) FROM Neighborhoods").fetchone()[0] # type: ignore
         # Total lost
-        self.lost = self.num_buurten - self.conn.sql("SELECT count(neighborhood_id) FROM Neighborhood_pts").fetchone()[0] # type: ignore
+        self.lost = self.num_buurten - self.conn.sql("SELECT count(neighborhood_id) FROM (SELECT DISTINCT neighborhood_id FROM Neighborhood_pts)").fetchone()[0] # type: ignore
 
+    def obtain_generated_pts(self):
+        """
+        ### Expects:
+            - create_pts_per_neighborhood run
+        ### Parameters:
+            - None
+        ### Returns:
+            - (xs, ys)\n
+                Here xs and ys are numpy arrays containing the x and y coordinates of the points respectively
+        ### Side-effects:
+            - None
+        """
+        arrow = self.conn.sql(""" SELECT ST_X(pt) AS x, ST_Y(pt) AS y FROM Neighborhood_pts """).to_arrow_table()
+        return (arrow.column("x").to_numpy(), arrow.column("y").to_numpy())
 
     def remove_f_edges(self, fraction: float, use_population=True, use_amenity=False):
         """
@@ -807,8 +846,8 @@ class Database:
         ### Parameters:
             - None
         ### Returns:
-            - pandas dataframe:\n
-                (neighborhood, avg_dist)
+            - geopandas GeoDataFrame:\n
+                (neighborhood, WKB, neighborhood_id, avg_dist)
         ### Side-effects:
             - (Re)creates table Dist_per_neighborhood
         """
@@ -821,7 +860,15 @@ class Database:
             ON pt.node_id = d.node_id
             GROUP BY pt.neighborhood_id
         """)
-        return self.conn.sql("SELECT * FROM Dist_per_neighborhood").df()
+        df = self.conn.sql("""
+            SELECT n.regio AS neighborhood, ST_AsWKB(n.geometry) AS wkb, d.*
+            FROM Dist_per_neighborhood d
+            JOIN Neighborhoods n
+            ON n.id = d.neighborhood_id
+            ORDER BY d.avg_dist DESC
+            """).df()
+        df['geometry'] = df['wkb'].apply(lambda x: wkb.loads(bytes(x))) # type: ignore
+        return gpd.GeoDataFrame(df, geometry='geometry', crs='epsg:28992')
 
     def get_demographic_average_distance(self):
         """
