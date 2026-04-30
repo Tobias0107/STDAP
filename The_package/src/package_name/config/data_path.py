@@ -1,6 +1,6 @@
-import os
+from pathlib import Path
 
-DATA_PATH = os.getenv("DATA_PATH", "/Users/arjan/datasets/osm/")
-PBF_FILE = os.path.join(DATA_PATH, "amsterdam.osm.pbf")
+DATA_DIR = Path.home() / "datasets"
 
-GTFS_FILE = os.path.join(DATA_PATH, "test_gtfs.zip")
+PBF_FILE = DATA_DIR / "osm/amsterdam.osm.pbf"
+GTFS_FILE = DATA_DIR / "gtfs/amsterdam_gtfs.zip"

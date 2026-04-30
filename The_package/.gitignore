@@ -235,3 +235,4 @@ The_package/tests/TestDatasets/
 *.pbf
 *.png
 *.png
+debug/
