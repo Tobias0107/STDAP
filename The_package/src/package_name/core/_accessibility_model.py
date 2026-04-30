@@ -10,9 +10,7 @@ import numpy as np
 from r5py import TravelTimeMatrix
 import geopandas as gpd
 from datetime import datetime
-
-
-
+from package_name.config.data_path import PBF_FILE
 
 def run_accessibility(network: Network,
                      database: Database,
@@ -121,11 +119,8 @@ def _compute_travel_times(network,
    ### Description:
        - Computes travel time matrix using r5
    """
-
-
    # Get r5 network
    r5_network = network.get_r5_network()
-
 
    # Initialize travel time matrix
    ttm = TravelTimeMatrix(
@@ -135,21 +130,14 @@ def _compute_travel_times(network,
        departure=departure_time
    )
 
-
    # Compute travel times
    travel_time_matrix = ttm.compute_travel_times()
 
 
    return travel_time_matrix
 
-
-
-
 from shapely import wkb
 import geopandas as gpd
-
-
-
 
 def _get_neighborhood_points(database):
    """

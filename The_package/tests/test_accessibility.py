@@ -6,6 +6,8 @@ geopackage = "tests/TestDatasets/test.gpkg"
 from package_name.core._travel_time import compute_travel_times_basic
 from package_name.core._travel_time import compute_travel_times_from_database
 from package_name.core._t_walk import compute_t_walk
+from package_name.config.data_path import PBF_FILE
+from package_name.config.data_path import PBF_FILE, GTFS_FILE
 
 
 def test_r5_basic():
@@ -42,8 +44,8 @@ def test_r5_basic():
 
    # Build r5 network using test datasets
    network.build_r5_network(
-       osm_pbf_path="tests/TestDatasets/amsterdam.osm.pbf",
-       gtfs_files=["tests/TestDatasets/test_gtfs.zip"]
+       osm_pbf_path=PBF_FILE,
+       gtfs_files=[GTFS_FILE]
    )
 
 
@@ -144,8 +146,8 @@ def test_r5_from_database():
 
 
    network.build_r5_network(
-       osm_pbf_path="tests/TestDatasets/amsterdam.osm.pbf",
-       gtfs_files=["tests/TestDatasets/test_gtfs.zip"]
+       osm_pbf_path=PBF_FILE,
+       gtfs_files=[GTFS_FILE]
    )
 
 
