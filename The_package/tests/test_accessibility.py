@@ -6,10 +6,15 @@ geopackage = "tests/TestDatasets/test.gpkg"
 from package_name.core._travel_time import compute_travel_times_basic
 from package_name.core._travel_time import compute_travel_times_from_database
 from package_name.core._t_walk import compute_t_walk
-from package_name.config.data_path import PBF_FILE
+import os
+import pytest
 from package_name.config.data_path import PBF_FILE, GTFS_FILE
 
 
+@pytest.mark.skipif(
+    not os.path.exists(GTFS_FILE),
+    reason="GTFS file not available"
+)
 def test_r5_basic():
    """
    ### Expected:
@@ -56,7 +61,10 @@ def test_r5_basic():
    # Validate that results exist
    assert len(df) > 0
 
-
+@pytest.mark.skipif(
+    not os.path.exists(GTFS_FILE),
+    reason="GTFS file not available"
+)
 def test_r5_from_database():
    """
    ### Expected:
@@ -138,7 +146,6 @@ def test_r5_from_database():
 
    origins.plot(markersize=1)
    plt.title("Neighborhood points")
-   plt.savefig("debug_points.png")
    plt.close()
    # ==========================
 
