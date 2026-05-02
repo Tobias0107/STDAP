@@ -36,18 +36,14 @@ def test_r5_basic():
        - Minimal integration test for r5py functionality
        - Ensures that the routing engine works independently of the database pipeline
    """
-
-
    # Initialize network for Amsterdam
    network = Network("Amsterdam", store_in_file=True)
-
 
    # Build r5 network using test datasets
    network.build_r5_network(
        osm_pbf_path=PBF_FILE,
        gtfs_files=[GTFS_FILE]
    )
-
 
    # Compute travel times
    df = compute_travel_times_basic(network.get_r5_network())
@@ -71,6 +67,7 @@ def test_r5_from_database():
 
     database.set_city("Amsterdam")
     database.load_network(network)
+    database.obtain_features()
     database.pre_process()
     database.create_pts_per_neighborhood()
 
@@ -105,25 +102,18 @@ def test_r5_from_database():
     count = database.conn.sql("SELECT COUNT(*) FROM Neighborhood_pts").fetchone()[0]
     assert count > 0
 
-    # === DEBUG VISUALIZATION ===
-    import matplotlib.pyplot as plt
-    from package_name.core._accessibility_model import (
-        _get_neighborhood_points,
-        _get_neighborhood_centroids
+    from package_name.core._t_walk import compute_t_walk, attach_geometry_to_t_walk
+    from package_name.utils.util_plotting import plot_t_walk_map
+
+    df = compute_t_walk(database, network)
+
+    gdf = attach_geometry_to_t_walk(database, df)
+
+    plot_t_walk_map(
+        gdf,
+        storage_folder="debug",
+        name="t_walk_amsterdam"
     )
-
-    origins = _get_neighborhood_points(database)
-    centroids = _get_neighborhood_centroids(database)
-
-    fig, ax = plt.subplots(figsize=(8, 8))
-
-    origins.plot(ax=ax, markersize=1, color="blue")
-    centroids.plot(ax=ax, color="red", markersize=10)
-
-    plt.title("Neighborhood points + centroids")
-    plt.savefig("debug/points_centroids.png")
-    plt.close()
-    # ==========================
 
     network.build_r5_network(
         osm_pbf_path=PBF_FILE,
@@ -147,32 +137,114 @@ def test_r5_from_database():
 
 
 def test_t_walk_full():
-   """
-   ### Expected:
-       - t_walk computed for Amsterdam neighborhoods
-       - Uses OSMnx only (no r5 / no PBF)
-   """
-   import os
-   from package_name.core._t_walk import compute_t_walk
-   from package_name.core._classes import Database, Network
+    """
+    ### Expected:
+        - t_walk computed for Amsterdam neighborhoods
+        - Plot is successfully generated and saved
 
-   csv = "tests/TestDatasets/test.csv"
-   geopackage = os.path.abspath("tests/TestDatasets/test.gpkg")
+    ### Description:
+        - Integration test: database → t_walk → geometry → visualization
+    """
 
-   network = Network(
-       "Amsterdam",
-       store_in_file=True,
-       store_dir=os.path.expanduser("~/.percolation_cache/")
+    import os
+    from package_name.core._t_walk import (
+        compute_t_walk,
+        attach_geometry_to_t_walk
+    )
+    from package_name.core._classes import Database, Network
+    from package_name.utils.util_plotting import plot_t_walk_map
+
+    csv = "tests/TestDatasets/test.csv"
+    geopackage = os.path.abspath("tests/TestDatasets/test.gpkg")
+
+    network = Network(
+        "Amsterdam",
+        store_in_file=True,
+        store_dir=os.path.expanduser("~/.percolation_cache/")
+    )
+
+    database = Database(csv, geopackage)
+
+    database.set_city("Amsterdam")
+    database.load_network(network)
+    database.pre_process()
+    database.obtain_features()
+    database.create_pts_per_neighborhood()
+
+    # === Step 1: compute t_walk ===
+    df = compute_t_walk(database, network)
+
+    # === Step 2: attach geometry ===
+    gdf = attach_geometry_to_t_walk(database, df)
+
+    # === Step 3: generate plot ===
+    output_folder = "debug"
+    output_name = "t_walk_pytest"
+
+    plot_t_walk_map(
+        gdf,
+        storage_folder="debug",
+        name="t_walk_pytest",
+        show=True  
    )
 
-   database = Database(csv, geopackage)
-   database.set_city("Amsterdam")
-   database.load_network(network)
-   database.pre_process()
-   database.obtain_features()
-   database.create_pts_per_neighborhood()
-   df = compute_t_walk(database, network)
+    output_path = f"{output_folder}/{output_name}.png"
 
-   print(df.head())
+    # === Step 4: assertions ===
+    assert len(df) > 0
+    assert len(gdf) > 0
+    assert os.path.exists(output_path)
 
-   assert len(df) > 0
+def test_attractiveness_full():
+    """
+    ### Expected:
+        - Attractiveness computed for Amsterdam neighborhoods
+        - Plot is successfully generated and saved
+
+    ### Description:
+        - Integration test: database → attractiveness → geometry → visualization
+    """
+
+    import os
+    from package_name.core._attractiveness import (
+        compute_attractiveness,
+        attach_geometry_to_attractiveness
+    )
+    from package_name.core._classes import Database, Network
+    from package_name.utils.util_plotting import plot_attractiveness_map
+
+    csv = "tests/TestDatasets/test.csv"
+    geopackage = os.path.abspath("tests/TestDatasets/test.gpkg")
+
+    # === Setup ===
+    network = Network("Amsterdam", store_in_file=True)
+
+    database = Database(csv, geopackage)
+
+    database.set_city("Amsterdam")
+    database.load_network(network)
+    database.pre_process()
+
+    # === Step 1: compute attractiveness ===
+    df_attr = compute_attractiveness(database)
+
+    # === Step 2: attach geometry ===
+    gdf_attr = attach_geometry_to_attractiveness(database, df_attr)
+
+    # === Step 3: plot ===
+    output_folder = "debug"
+    output_name = "attractiveness_test"
+
+    plot_attractiveness_map(
+        gdf_attr,
+        storage_folder=output_folder,
+        name=output_name,
+        show=True
+    )
+
+    output_path = f"{output_folder}/{output_name}.png"
+
+    # === Assertions ===
+    assert len(df_attr) > 0
+    assert len(gdf_attr) > 0
+    assert os.path.exists(output_path)

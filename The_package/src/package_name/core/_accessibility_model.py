@@ -203,36 +203,23 @@ def _get_neighborhood_points(database):
    gdf = gdf.to_crs("EPSG:4326")
    return gdf
 
-
-
-
 def _get_neighborhood_centroids(database):
    """
    ### Expected:
        - Table Neighborhoods exists
        - Geometry column stored as WKB (DuckDB output)
-
-
    ### Parameters:
        - database:\n
            Database object
-
-
    ### Returns:
        - GeoDataFrame with neighborhood centroids as shapely geometries
-
-
    ### Side-effects:
        - None
-
-
    ### Description:
        - Retrieves neighborhood centroids from the database
        - Converts WKB geometries to shapely objects
        - Ensures compatibility with GeoPandas
    """
-
-
    # Step 1: Retrieve centroids as WKB
    df = database.conn.sql("""
        SELECT
@@ -248,22 +235,61 @@ def _get_neighborhood_centroids(database):
        except Exception:
            return None
 
-
    # Step 2: Convert WKB → shapely geometry
    df["geometry"] = df["geometry"].apply(safe_wkb)
 
-
    # Step 3: Remove invalid geometries
    df = df.dropna(subset=["geometry"])
-
 
    # Step 4: Convert to GeoDataFrame
    gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:28992")
    gdf = gdf.to_crs("EPSG:4326")
    return gdf
 
+def _get_neighborhood_polygons(database):
+   """
+   ### Expected:
+       - Table Neighborhoods exists
+       - Geometry column stored as WKB (DuckDB output)
 
+   ### Parameters:
+       - database:\n
+           Database object
 
+   ### Returns:
+       - GeoDataFrame with neighborhood polygons
+
+   ### Side-effects:
+       - None
+
+   ### Description:
+       - Retrieves neighborhood geometries from the database
+       - Converts WKB geometries to shapely objects
+       - Ensures compatibility with GeoPandas
+   """
+   from shapely import wkb
+   import geopandas as gpd
+
+   df = database.conn.sql("""
+       SELECT
+           id AS neighborhood_id,
+           ST_AsWKB(geometry) AS geometry
+       FROM Neighborhoods
+   """).df()
+
+   def safe_wkb(x):
+       try:
+           return wkb.loads(bytes(x))
+       except Exception:
+           return None
+
+   df["geometry"] = df["geometry"].apply(safe_wkb)
+   df = df.dropna(subset=["geometry"])
+
+   gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:28992")
+   gdf = gdf.to_crs("EPSG:4326")
+
+   return gdf
 
 def _get_opportunities(database):
    """
