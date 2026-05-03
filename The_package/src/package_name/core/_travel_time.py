@@ -55,6 +55,7 @@ def compute_travel_times_basic(r5_network):
         departure=datetime(2024, 1, 1, 8, 0)
     )
 
+
     # Return result (already a DataFrame)
     return ttm
 

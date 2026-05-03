@@ -351,6 +351,44 @@ def attach_geometry_to_attractiveness(database, df):
 
     return gpd.GeoDataFrame(merged, geometry="geometry", crs="EPSG:28992")
 
+def attach_geometry_to_t_travel(database, df_avg):
+    """
+    Attach neighborhood geometry to avg travel time per origin
+
+    ### Expected:
+        - df_avg contains:
+            - from_id
+            - avg_travel_time
+
+    ### Returns:
+        - GeoDataFrame with geometry + avg_travel_time
+    """
+
+    import geopandas as gpd
+    from shapely import wkb
+
+    geom_df = database.conn.sql("""
+        SELECT id, ST_AsWKB(geometry) AS geometry
+        FROM Neighborhoods
+    """).df()
+
+    geom_df["geometry"] = geom_df["geometry"].apply(lambda x: wkb.loads(bytes(x)))
+
+    gdf_geom = gpd.GeoDataFrame(
+        geom_df,
+        geometry="geometry",
+        crs="EPSG:28992"
+    )
+
+    merged = df_avg.merge(
+        gdf_geom,
+        left_on="from_id",
+        right_on="id",
+        how="left"
+    )
+
+    return gpd.GeoDataFrame(merged, geometry="geometry", crs="EPSG:28992")
+
 def plot_attractiveness_map(gdf, storage_folder="debug", name="attractiveness", show=False):
     """
     ### Description:
@@ -382,3 +420,42 @@ def plot_attractiveness_map(gdf, storage_folder="debug", name="attractiveness", 
     else:
         plt.close()
 
+
+def plot_t_travel_avg_map(gdf, storage_folder="debug", name="t_travel", show=False):
+    """
+    ### Purpose:
+        - Visualize average travel time per neighborhood
+
+    ### Expected:
+        - GeoDataFrame with:
+            - geometry
+            - avg_travel_time
+
+    ### Description:
+        - Plots choropleth map of average travel time
+    """
+
+    import os
+    import matplotlib.pyplot as plt
+
+    os.makedirs(storage_folder, exist_ok=True)
+
+    fig, ax = plt.subplots(figsize=(10, 10))
+
+    gdf.plot(
+        column="avg_travel_time",
+        cmap="viridis",
+        legend=True,
+        ax=ax
+    )
+
+    ax.set_title("Average Travel Time per Neighborhood")
+    ax.axis("off")
+
+    path = f"{storage_folder}/{name}.png"
+    plt.savefig(path)
+
+    if show:
+        plt.show()
+
+    plt.close()
