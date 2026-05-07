@@ -57,24 +57,24 @@ class Settings:
             "buurtcode": "buurtcode",
             "geom": "geom"
         },
-        metadata={"description": "Datasets of different years might have different"
-                  "column names. Therefore this dictionary allows one to change"
-                  "the column names of the dataset that are read by the package."
-                  "The keys of the dictionary are the internal names of the data"
-                  "used for the simulation. The values are the names of the corresponding"
-                  "columns in the datasets (csv / geopackage). Non-existent columns"
-                  "will result in an error. Empty columns will not result in an error."
-                  "The geom and buurtcode come from the geopackage. All other columns"
+        metadata={"description": "Datasets of different years might have different "
+                  "column names. Therefore this dictionary allows one to change "
+                  "the column names of the dataset that are read by the package. "
+                  "The keys of the dictionary are the internal names of the data "
+                  "used for the simulation. The values are the names of the corresponding "
+                  "columns in the datasets (csv / geopackage). Non-existent columns "
+                  "will result in an error. Empty columns will not result in an error. "
+                  "The geom and buurtcode come from the geopackage. All other columns "
                   "come from the csv."}
     )
     dataset_nullstring: list[str] = field (
         default_factory= lambda: ['.'],
-        metadata={"description": "The character used for the NULL values in the csv files."
+        metadata={"description": "The character used for the NULL values in the csv files. "
                   "Parameter to allow compatibility for datasets of different years."}
     )
     dataset_delim: str = field (
         default=',',
-        metadata={"description": "The character used for the delimiter in the csv files."
+        metadata={"description": "The character used for the delimiter in the csv files. "
                   "Parameter to allow compatibility for datasets of different years."}
     )
     dataset_decimal_separator: str = field (
@@ -90,40 +90,40 @@ class Settings:
         default=functions.Poisson_distribution,
         metadata= {"description": "Given the upper and lower bounds of the "\
                     "bounding box of the neighborhood. Generate a list of "\
-                    "coordinates of points representing the neighborhood."\
-                    "Default uses scipy PoissonDisk distribution."\
-                    "Import default with 'import package_name.config.functions.Poisson_distribution'"\
-                    "This function should return a numpy NDarray consisting of a list of points."\
+                    "coordinates of points representing the neighborhood. "\
+                    "Default uses scipy PoissonDisk distribution. "\
+                    "Import default with 'import package_name.config.functions.Poisson_distribution' "\
+                    "This function should return a numpy NDarray consisting of a list of points. "\
                     "Points are lists of 2 elements in the form [x, y]"}
     )
     one_way_worth: float = field(
         default=0.7,
-        metadata={"description": "The worth of a one way street, as compared to"\
-                  "two way streets. The parameter is used for simulations that remove"\
-                  "streets from driving networks. Setting this to zero would fully prioritize"\
+        metadata={"description": "The worth of a one way street, as compared to "\
+                  "two way streets. The parameter is used for simulations that remove "\
+                  "streets from driving networks. Setting this to zero would fully prioritize "\
                   "removing 2-way streets before 1-way streets"}
     )
     transit_max_edge_dist: int = field(
         default=30,
-        metadata={"description": "This field determined the maximum distance in meters"\
+        metadata={"description": "This field determined the maximum distance in meters "\
                   "between a transit node, and the nearest edge."}
     )
     transit_max_pts_dist: int = field(
         default=30,
-        metadata={"description": "This field determines the maximum distance in meters"\
+        metadata={"description": "This field determines the maximum distance in meters "\
                   "between a point in a neighborhood, and the nearest node in the pedestrian network."}
     )
     transit_max_move_dist: int = field(
         default=200,
-        metadata={"description": "The maximum distance in meters between the previous"
+        metadata={"description": "The maximum distance in meters between the previous "\
                   "transit location, and the new moved transit location."}
     )
     max_dist_ped_transit: int = field(
         default=30,
-        metadata={"description": "The maximum distance in meters between a transit station"
-                  "and the pedestrian network. This is needed as nodes between the networks do"
-                  "not nessisarily overlap. This constant acts as a buffer allowing the networks"
-                  "to be merged, and obtain the nodes in the driving network accessible by the"
+        metadata={"description": "The maximum distance in meters between a transit station "\
+                  "and the pedestrian network. This is needed as nodes between the networks do "\
+                  "not nessisarily overlap. This constant acts as a buffer allowing the networks "\
+                  "to be merged, and obtain the nodes in the driving network accessible by the "\
                   "pedestrian network."}
     )
 
@@ -137,16 +137,17 @@ class Settings:
     )
     colormap: str = field(
         default='viridis_r',
-        metadata={"description": "The colormap used to color the networks based on distance."
+        metadata={"description": "The colormap used to color the networks based on distance. "
                   "Should be a valid matplotlib colormap"}
     )
     color_normalization: Callable[..., mcolor.Normalize] = field(
         default=mcolor.LogNorm,
-        metadata={"description": ""}
+        metadata={"description": "The normalization used to assign colors to values in the colored network. "
+                  "It should be a valid matplotlib normalization"}
     )
     legend_num_labels: int = field(
         default=10,
-        metadata={"description": "The number of numbers to show on the colorbar legend when"\
+        metadata={"description": "The number of numbers to show on the colorbar legend when "\
                   "plotting the colored network."}
     )
 

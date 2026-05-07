@@ -9,11 +9,11 @@ This file describes the uml of the entire python package.
 class Main_class {
     Database data
     Network network
-    
+
     void __init(csv, geopackage)
     Lst get_cities()
     Bool choose_city(city)
-    
+
     Dict Simulate_transit_dist_on_trans(fraction, dem_grps, vis_opt)
     Lst[Dict] Simulate_transit_dist_on_trans_range(range, dem_grps, vis_opt, prog_opt)
 }
@@ -26,17 +26,36 @@ class Database {
 
     __init(csv, geopackage)
     Lst get_cities()
-    load_network(name)
-
+    set_city(city)
+    load_network(Network)
+    obtain_features()
+    pre_process()
+    create_pts_per_neighborhood()
+    Pts obtain_generated_pts()
+    remove_f_edges(fraction)
+    link_busses()
+    move_transit_minimal()
+    move_transit_blank_slate()
+    calculate_distances()
+    get_dist_per_neighborhood()
+    get_demographic_results()
 }
 
 ' Wrapper for interacting with the network. All information about the nodes is stored
 ' in the database.
 class Network {
-    OSMnx graph
-    void __init()
-    Bool remove_edges(Lst)
-    Float shortest_dist(from, to)
+    OSMnx graph_car_accessible
+    OSMnx graph_pedestrian
+    DataFrame NetworkFeatures
+    void __init(city, store_in_file=True)
+    DataFrames get_drive_network_df()
+    DataFrame get_pedestrian_nodes_df()
+    DataFrame get_distances_to_transit()
+    DataFrame get_features()
+    transform_edges(ebunch)
+    add_edges_to_ped_network(ebunch)
+    build_r5_network(osm_pbf_path, gtfs_files)
+    get_r5_network()
 }
 
 ' Gui is separate from the Main_class and uses this main class to run the Gui.
