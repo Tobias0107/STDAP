@@ -78,7 +78,6 @@ class Network:
         # Calculate the distances from ped_transit_nodes to all other nodes in ped_network
         return nx.multi_source_dijkstra_path_length(G, ped_transit_nodes, weight="length")
 
-
     def get_features(self, amenity=True, public_transport=True):
         """ Import features via api or file, and then return features as GeoDataFrame """
         if os.path.isfile(f"{self.path}.parquet"):
@@ -674,12 +673,19 @@ class Database:
             - Updates street_count in Graph_nodes table
         """
         one_way_worth = settings.one_way_worth
-        if not (use_population ^ use_amenity):
-            raise ValueError("use_population and use_amenity can't be both true or both false")
+        if use_population and use_amenity:
+            density = "n.population * n.amenities / n.area"
+        elif not (use_population or use_amenity):
+            raise ValueError("use_population and use_amenity can't be both false")
         elif use_population:
             density = "n.population / n.area"
         else:
             density = "n.amenities / n.area"
+
+        # Obtain necessary data from database
+
+
+        # Iteratively select edges to be removed
 
         # Get id of edges to be removed.
         tot_len = "(SELECT sum(length) from Graph_edges)"
