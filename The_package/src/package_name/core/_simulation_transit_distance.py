@@ -4,12 +4,13 @@
 """
 # Imports
 import networkx as nx
+import geopandas as gpd
 from package_name.core._classes import Database, Network
 import package_name.utils.util_plotting as plot
 
 def run_simulation(network:Network, database:Database, f: float, use_population=True,
                    use_amenity=True, simple_move=True, blank_slate=False,
-                   print_progress=True, saving_dir="results_sim_transit_dist/"):
+                   print_progress=True, saving_dir="results_sim_transit_dist/", svg=True):
     """
         ### Expects:
             - network == Network(city)
@@ -103,13 +104,14 @@ def run_simulation(network:Network, database:Database, f: float, use_population=
     dists_neighborhoods_t1 = database.get_dist_per_neighborhood()
     if print_progress: print("Averaging distance per demographic group afterwards")
     dem_grp_avg_t1 = database.get_demographic_average_distance()
-    if print_progress: print("Obtaining generated points (for visualization)")
+    if print_progress: print("Retrieving generated points (for visualization)")
     xs, ys = database.obtain_generated_pts()
     if print_progress: print("Creating difference network")
     edges_t1 = set(network.graph_drive.edges(keys=True))
     G_difference = G_original.edge_subgraph(edges_t0 - edges_t1).copy()
-    if print_progress: print("Difference network:")
-    if print_progress: print(G_difference)
+    if print_progress: print("Retrieving population and amenity distribution")
+    pop_dist = database.get_population_distribution()
+    amenity_xs, amenity_ys = database.get_amenity_pts()
 
     ###########################################################################
     # Visualization ###########################################################
@@ -135,10 +137,27 @@ def run_simulation(network:Network, database:Database, f: float, use_population=
     # Generated points
     if print_progress: print("Plotting all generated points")
     plot.plot_points(xs, ys,
-                     title='Generated points',
+                     title=f'Generated points {city}',
                      subtitle=f'Number of points: {xs.size}',
                      storage_folder=saving_dir,
                      name=f'generated points: {city}')
+
+    # Amenities
+    # if print_progress: print("Plotting all generated points")
+    # plot.plot_points(amenity_xs, amenity_ys,
+    #                  title=f'Amenities {city}',
+    #                  subtitle='',
+    #                  storage_folder=saving_dir,
+    #                  name=f'Amenities {city}')
+
+    # # Population distribution
+    # if print_progress: print("Plotting population distribution network")
+    # plot.colored_network(gpd.GeoDataFrame(pop_dist), network.graph_drive,
+    #                      data_col_name='population',
+    #                      title=f"Population distribution {city}",
+    #                      subtitle='',
+    #                      storage_folder=saving_dir,
+    #                      name=f"Population distribution {city}")
 
 
     # Bar diagraphs of distances per neighborhood beforehand
@@ -208,6 +227,6 @@ def run_simulation(network:Network, database:Database, f: float, use_population=
     # Show population distribution
 
 
-    # 
+    #
 
 

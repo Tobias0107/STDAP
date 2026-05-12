@@ -154,7 +154,7 @@ def bar_dist_per_neighborhood(df: gpd.GeoDataFrame, title='Average Distance per 
     fig.savefig(os.path.join(storage_folder, name + '.svg'))
 
 
-def colored_network(gdf: gpd.GeoDataFrame, graph, title='Average Distance per Neighborhood', subtitle='', storage_folder='.', name='dist_per_neighborhood', svg=True, force_linear=False):
+def colored_network(gdf: gpd.GeoDataFrame, graph, data_col_name='avg_dist', title='Average Distance per Neighborhood', subtitle='', x_label='', y_label='', storage_folder='.', name='dist_per_neighborhood', svg=True, force_linear=False):
     """
     ### Description
         This function creates a colored network image with the data
@@ -189,7 +189,7 @@ def colored_network(gdf: gpd.GeoDataFrame, graph, title='Average Distance per Ne
         - Stores a svg of the plot on given location.
     """
     # Create Colormap
-    vals = gdf['avg_dist']
+    vals = gdf[data_col_name]
     v_min, v_max = vals.min(), vals.max()
     if force_linear:
         norm = plt.Normalize(v_min, v_max) # type: ignore
@@ -198,7 +198,7 @@ def colored_network(gdf: gpd.GeoDataFrame, graph, title='Average Distance per Ne
     cmap = mpl.colormaps[settings.colormap]
 
     # Add use Colormap to determine the color for every neighborhood
-    gdf['color'] = gdf['avg_dist'].apply(lambda x: cmap(norm(x)))
+    gdf['color'] = gdf[data_col_name].apply(lambda x: cmap(norm(x)))
 
     # Plot the neighborhood colors
     fig, ax = ox.plot_footprints(gdf, color=gdf['color'], edge_color='black', alpha=0.4, show=False, close=False) # type: ignore
@@ -217,7 +217,7 @@ def colored_network(gdf: gpd.GeoDataFrame, graph, title='Average Distance per Ne
     # tick_values = np.linspace(v_min, v_max, num=5)
     cbar.set_ticks(tick_values)
     cbar.set_ticklabels([str(int(x)) for x in tick_values])
-    cbar.set_label('Average Distance', fontsize=10)
+    cbar.set_label(data_col_name, fontsize=10)
 
     # Save bar-diagraph
     if not os.path.isdir(storage_folder):

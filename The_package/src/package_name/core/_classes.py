@@ -1124,5 +1124,5 @@ class Database:
         ### Side-effects:
             - None
         """
-        arrow = self.conn.sql(""" SELECT ST_X(loc) AS x, ST_Y(loc) AS y FROM Features """).to_arrow_table()
+        arrow = self.conn.sql(""" SELECT ST_X(ST_Centroid(loc)) AS x, ST_Y(ST_Centroid(loc)) AS y FROM Features """).to_arrow_table()
         return (arrow.column("x").to_numpy(), arrow.column("y").to_numpy())
