@@ -16,7 +16,9 @@ import pandas as pd
 import numpy as np
 import geopandas as gpd
 import pyarrow as pa
+import heapq
 from shapely import wkb
+from collections import defaultdict
 
 
 # Importing helper functions from utils
@@ -64,8 +66,8 @@ class Network:
         return ox.convert.graph_to_gdfs(self.graph_drive)
 
     def get_pedestrian_nodes_df(self):
-        "Returns tuple nodes of pedestrian network converted to pandas dataframe"
-        return ox.convert.graph_to_gdfs(self.graph_pedestrian, edges=False, fill_edge_geometry=False)
+        "Returns tuple (nodes, edges) of pedestrian network converted to pandas dataframe"
+        return ox.convert.graph_to_gdfs(self.graph_pedestrian, fill_edge_geometry=True)
 
     def get_distances_to_transit(self, ped_transit_nodes):
         """
@@ -349,6 +351,10 @@ class Database:
             self.conn.sql(f"SELECT * FROM Dist_per_neighborhood LIMIT {limit}").to_csv("Dist_per_neighborhood_database_preview.csv")
         except Exception:
             pass
+        try:
+            self.conn.sql(f"SELECT * FROM Graph_edges_ped LIMIT {limit}").to_csv("Graph_edges_ped_database_preview.csv")
+        except Exception:
+            pass
 
     def get_cities(self):
         """
@@ -436,21 +442,44 @@ class Database:
                              ), c.geom)
                 WHERE recs='Buurt' AND gm_naam='{self.city}'
             """)
+
         # Get pedestrian nodes
-        ped_nodes_df = self.network.get_pedestrian_nodes_df()
+        ped_nodes_df, ped_edges_df = self.network.get_pedestrian_nodes_df()
         ped_nodes = ped_nodes_df.to_arrow()
+        ped_edges_df = ped_edges_df.reset_index()
+        ped_edges_df["geometry"] = ped_edges_df["geometry"].astype(str) # pyright: ignore[reportArgumentType]
+        self.conn.register("ped_edges", ped_edges_df)
 
         # Create Graph_nodes_ped (storing the nodes of the pedestrian network)
-        self.conn.sql("""
-            CREATE TABLE IF NOT EXISTS Graph_nodes_ped AS
-            SELECT *
-            FROM ped_nodes
+        self.conn.sql(f"""
+            CREATE OR REPLACE TABLE Graph_nodes_ped AS
+            SELECT n.osmid AS id, n.street_count, n.geometry, c.id AS neighborhood_id
+            FROM ped_nodes n
+            JOIN CBS c
+            ON ST_Within(n.geometry, c.geom)
+            WHERE recs='Buurt' AND gm_naam='{self.city}'
+        """)
+
+        # Create Graph_edges_ped (storing the nodes of the pedestrian network)
+        self.conn.sql(f"""
+            CREATE OR REPLACE TABLE Graph_edges_ped AS
+            SELECT e.u, e.v, e.key, e.length, false AS removed, ST_GeomFromText(e.geometry) AS geometry, c.id AS neighborhood_id
+            FROM ped_edges e
+            JOIN Graph_nodes n1
+            ON e.u = n1.id
+            JOIN Graph_nodes n2
+            ON e.v = n2.id
+            JOIN CBS c
+            ON ST_Within(ST_Point((ST_X(n1.loc) + ST_X(n2.loc)) / 2,
+                                  (ST_Y(n1.loc) + ST_Y(n2.loc)) / 2
+                         ), c.geom)
+            WHERE recs='Buurt' AND gm_naam='{self.city}'
         """)
 
         # Create Graph_nodes_accessible (storing drive network nodes accessible by pedestrian network)
         self.conn.sql(f"""
             CREATE OR REPLACE TABLE Graph_nodes_accessible AS
-            SELECT n.*, p.osmid AS pedestrian_node_id
+            SELECT n.*, p.id AS pedestrian_node_id
             FROM Graph_nodes n
             JOIN Graph_nodes_ped p
             ON ST_DWithin(p.geometry, n.loc, {settings.max_dist_ped_transit})
@@ -618,14 +647,14 @@ class Database:
         # Points linked to ped_network by closest node within transit_max_pts_dist
         self.conn.sql(f"""
             INSERT INTO Neighborhood_pts (neighborhood_id, pt, node_id)
-            SELECT pt.ids, ST_Point(pt.xs, pt.ys), ped.osmid
+            SELECT pt.ids, ST_Point(pt.xs, pt.ys), ped.id
             FROM Neighborhood_pts_df pt
             JOIN Neighborhoods n
             ON pt.ids = n.id AND ST_Within(ST_Point(pt.xs, pt.ys), n.geometry)
             JOIN Graph_nodes_ped ped
             ON ST_DWithin(ST_Point(pt.xs, pt.ys), ped.geometry, {settings.transit_max_pts_dist})
             QUALIFY row_number()
-            OVER (PARTITION BY ped.osmid
+            OVER (PARTITION BY ped.id
                   ORDER BY ST_Distance(ST_Point(pt.xs, pt.ys), ped.geometry) ASC) = 1
             """)
 
@@ -673,6 +702,17 @@ class Database:
             - Updates street_count in Graph_nodes table
         """
         one_way_worth = settings.one_way_worth
+
+        # Obtain necessary data from database
+
+        # Total_street length
+        tot_street_len = int(self.conn.sql("""
+            SELECT sum(length)
+            FROM Graph_edges
+            WHERE NOT removed
+        """).fetchone()[0]) # type: ignore
+
+        # Create dict: neighborhood --> density, ped_len, tot_len
         if use_population and use_amenity:
             density = "n.population * n.amenities / n.area"
         elif not (use_population or use_amenity):
@@ -681,43 +721,115 @@ class Database:
             density = "n.population / n.area"
         else:
             density = "n.amenities / n.area"
+        initial_df = self.conn.sql(f"""
+            WITH ped AS (
+                    SELECT neighborhood_id, SUM(length) AS ped_len
+                    FROM Graph_edges_ped
+                    GROUP BY neighborhood_id
+                ),
+                car AS (
+                    SELECT neighborhood_id, SUM(length) AS car_len
+                    FROM Graph_edges
+                    GROUP BY neighborhood_id
+                )
+            SELECT n.id,
+                   {density} AS density,
+                   COALESCE(p.ped_len, 0) AS ped_len,
+                   COALESCE(p.ped_len, 0) + COALESCE(c.car_len, 0) AS tot_len
+            FROM Neighborhoods n
+            JOIN ped p
+            ON p.neighborhood_id = n.id
+            JOIN car c
+            ON c.neighborhood_id = n.id
+            ORDER BY density * ped_len / tot_len
+        """).df()
+        neighborhoods = defaultdict(list)
+        for row in initial_df.itertuples(index=False):
+            neighborhoods[row.id].append((row.density, row.ped_len, row.tot_len))
 
-        # Obtain necessary data from database
+        # Create Dict: Neighborhood --> [not_removed_edges]
+        edges_df = self.conn.sql("""
+            SELECT u, v, key, length, neighborhood_id
+            FROM Graph_edges
+            WHERE NOT removed
+        """).df()
+        neighborhood_edges = defaultdict(list)
+        for row in edges_df.itertuples(index=False):
+            neighborhood_edges[row.neighborhood_id].append((row.u, row.v, row.key, row.length))
 
+        # Get heapq of neighborhoods sorted by score (to overwrite comparing function I make a class.)
+        class Neighborhood:
+            def __init__(self, id: str, score: int) -> None:
+                self.id = id
+                self.score = score
+            def __lt__(self, other):
+                return self.score > other.score
+        temp = initial_df["id"].to_list()
+        sorted_neighborhoods: list[Neighborhood] = []
+        for zone in temp:
+            try:
+                density, ped_len, tot_len = neighborhoods[zone].pop()
+            except IndexError:
+                continue
+            sorted_neighborhoods.append(Neighborhood(zone, int(density * ped_len / tot_len)))
+        heapq.heapify(sorted_neighborhoods)
 
         # Iteratively select edges to be removed
+        pedestrianized = 0
+        to_pedestrianize_u = []
+        to_pedestrianize_v = []
+        to_pedestrianize_key = []
 
-        # Get id of edges to be removed.
-        tot_len = "(SELECT sum(length) from Graph_edges)"
+        while pedestrianized / tot_street_len < fraction:
+            # Get first item sorted list (get info from dict)
+            zone = heapq.heappop(sorted_neighborhoods)
+            try:
+                density, ped_len, tot_len = neighborhoods[zone.id].pop()
+            except IndexError:
+                continue
+            # Pop item from not_removed_edges_df, add to to_pedestrianize
+            try:
+                u,v,key, length = neighborhood_edges[zone.id].pop()
+            except IndexError:
+                continue
+            # Add edge length.
+            pedestrianized += length
+            ped_len += length
+
+            # Re-calculate score and insert it in sorted neighborhood list
+            neighborhoods[zone.id].append((density, ped_len, tot_len))
+            zone.score = density * ped_len / tot_len
+            heapq.heappush(sorted_neighborhoods, zone)
+
+            to_pedestrianize_u.append(u)
+            to_pedestrianize_v.append(v)
+            to_pedestrianize_key.append(key)
+
+        # Make result importable (as Pandas DataFrame)
+        to_remove_df =  pd.DataFrame.from_dict({
+            "u": to_pedestrianize_u,
+            "v": to_pedestrianize_v,
+            "key": to_pedestrianize_key,
+        })
+        self.conn.register("to_remove_df", to_remove_df)
+
+        # Import result into duckdb.
         self.conn.sql(f"""
             CREATE OR REPLACE TEMP TABLE edges_to_remove AS
             SELECT *
-            FROM (
-                SELECT e.*
-                FROM Graph_edges e
-                JOIN Neighborhoods n
-                ON e.neighborhood_id = n.id
-                QUALIFY sum(e.length)
-                    OVER (ORDER BY (CASE WHEN e.oneway
-                                        THEN ({density} * {one_way_worth})
-                                        ELSE ({density}) END ) DESC )
-                    <=  ({fraction} * {tot_len}) ) sub
-            WHERE sub.removed = 'false'
+            FROM to_remove_df
         """)
 
         # Remove edges from network
-        to_remove_df = self.conn.sql("SELECT u, v, key FROM edges_to_remove").df()
         ebunch = list(to_remove_df.itertuples(index=False, name=None))
         self.network.transform_edges(ebunch)
 
         # Update the Graph_edges table with removed edges
         self.conn.sql("""
-            UPDATE Graph_edges
+            UPDATE Graph_edges g
             SET removed = 'true'
-            FROM edges_to_remove
-            WHERE Graph_edges.u = edges_to_remove.u
-                      AND Graph_edges.u = edges_to_remove.u
-                      AND Graph_edges.key = edges_to_remove.key
+            FROM edges_to_remove r
+            WHERE g.u = r.u AND g.u = r.u AND g.key = r.key
         """)
 
         # Update street count
