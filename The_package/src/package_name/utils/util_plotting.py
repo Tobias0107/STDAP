@@ -154,7 +154,7 @@ def bar_dist_per_neighborhood(df: gpd.GeoDataFrame, title='Average Distance per 
     fig.savefig(os.path.join(storage_folder, name + '.svg'))
 
 
-def colored_network(gdf: gpd.GeoDataFrame, graph: nx.MultiDiGraph, title='Average Distance per Neighborhood', subtitle='', storage_folder='.', name='dist_per_neighborhood', svg=True, force_linear=False):
+def colored_network(gdf: gpd.GeoDataFrame, graph, title='Average Distance per Neighborhood', subtitle='', storage_folder='.', name='dist_per_neighborhood', svg=True, force_linear=False):
     """
     ### Description
         This function creates a colored network image with the data
@@ -194,7 +194,7 @@ def colored_network(gdf: gpd.GeoDataFrame, graph: nx.MultiDiGraph, title='Averag
     if force_linear:
         norm = plt.Normalize(v_min, v_max) # type: ignore
     else:
-        norm = settings.color_normalization(v_min, v_max) # type: ignore
+        norm = settings.color_normalization(max(v_min, 1e-9), v_max) # type: ignore
     cmap = mpl.colormaps[settings.colormap]
 
     # Add use Colormap to determine the color for every neighborhood

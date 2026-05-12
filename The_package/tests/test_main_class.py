@@ -17,6 +17,7 @@ settings.dataset_column_names['low_education'] = "a_opl_hw"
 settings.dataset_nullstring = ['       .', '.', '']
 settings.neighborhood_distribution = lambda a, b, c, d : Poisson_distribution(a, b, c, d, radius=30)
 
+
 sim = simulator(csv, geopackage, store_in_file=True)
 sim.choose_city("Amsterdam")
 

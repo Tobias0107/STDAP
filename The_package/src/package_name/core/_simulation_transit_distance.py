@@ -3,10 +3,12 @@
     distance after removing <fraction> edges.
 """
 # Imports
+import networkx as nx
 from package_name.core._classes import Database, Network
 import package_name.utils.util_plotting as plot
 
-def run_simulation(network:Network, database:Database, f: float,
+def run_simulation(network:Network, database:Database, f: float, use_population=True,
+                   use_amenity=True, simple_move=True, blank_slate=False,
                    print_progress=True, saving_dir="results_sim_transit_dist/"):
     """
         ### Expects:
@@ -61,6 +63,11 @@ def run_simulation(network:Network, database:Database, f: float,
 
     if print_progress: print(f"\nRunning simulation for {database.city}\n\n")
 
+    # Storing original network (for difference network)
+    if print_progress: print("Storing original network (for difference network)")
+    G_original = network.graph_drive.copy()
+    edges_t0 = set(network.graph_drive.edges(keys=True))
+
     # Obtaining information, building database tables
     if print_progress: print("Loading city network into database")
     database.load_network(network)
@@ -85,7 +92,7 @@ def run_simulation(network:Network, database:Database, f: float,
 
     # Continue simulation
     if print_progress: print(f"Removing {f * 100}% of the driving network length")
-    database.remove_f_edges(f)
+    database.remove_f_edges(f, use_population, use_amenity)
     if print_progress: print("Moving transit")
     database.move_transit_minimal()
     if print_progress: print("Re-calculating distances to public transit")
@@ -98,6 +105,11 @@ def run_simulation(network:Network, database:Database, f: float,
     dem_grp_avg_t1 = database.get_demographic_average_distance()
     if print_progress: print("Obtaining generated points (for visualization)")
     xs, ys = database.obtain_generated_pts()
+    if print_progress: print("Creating difference network")
+    edges_t1 = set(network.graph_drive.edges(keys=True))
+    G_difference = G_original.edge_subgraph(edges_t0 - edges_t1).copy()
+    if print_progress: print("Difference network:")
+    if print_progress: print(G_difference)
 
     ###########################################################################
     # Visualization ###########################################################
@@ -177,8 +189,8 @@ def run_simulation(network:Network, database:Database, f: float,
 
     # The difference between the two
     if print_progress: print("Creating colored graphs about the difference before and after: car-accessible")
-    dists_neighborhoods_t1['avg_dist'] = dists_neighborhoods_t0['avg_dist'] - dists_neighborhoods_t1['avg_dist']
-    plot.colored_network(dists_neighborhoods_t1, network.graph_drive,
+    dists_neighborhoods_t1['avg_dist'] = dists_neighborhoods_t1['avg_dist'] - dists_neighborhoods_t0['avg_dist']
+    plot.colored_network(dists_neighborhoods_t1, G_difference,
                          title=f"Car-accessible network {city} difference",
                          subtitle='beforehand - afterwards',
                          storage_folder=saving_dir,
@@ -186,9 +198,16 @@ def run_simulation(network:Network, database:Database, f: float,
                          force_linear=True)
 
     if print_progress: print("Creating colored graphs about the difference before and after: pedestrian")
-    plot.colored_network(dists_neighborhoods_t1, network.graph_pedestrian,
+    plot.colored_network(dists_neighborhoods_t1, G_difference,
                          title=f"Pedestrian network {city} difference",
                          subtitle='beforehand - afterwards',
                          storage_folder=saving_dir,
                          name=f"Pedestrian network {city} difference",
                          force_linear=True)
+
+    # Show population distribution
+
+
+    # 
+
+

@@ -19,6 +19,7 @@ import pyarrow as pa
 import heapq
 from shapely import wkb
 from collections import defaultdict
+import random
 
 
 # Importing helper functions from utils
@@ -682,9 +683,8 @@ class Database:
     def remove_f_edges(self, fraction: float, use_population=True, use_amenity=False):
         """
         ### Description:
-            Will sort the edges based on population or amenity density per meter street.
-            Will then remove edges until desired fraction of street-length is reached.
-            Meaning successive removals will built upon the previous removals.
+            Will sort the edges based scoring formula (see report).
+            Will then transform desired fraction of total car-accessible streets\
         ### Expected:
             - Pre_process run
         ### Parameters:
@@ -703,149 +703,167 @@ class Database:
         """
         one_way_worth = settings.one_way_worth
 
-        # Obtain necessary data from database
-
-        # Total_street length
-        tot_street_len = int(self.conn.sql("""
-            SELECT sum(length)
+        # Get city total road length
+        tot_street_len = self.conn.sql("""
+            SELECT SUM(length)
             FROM Graph_edges
             WHERE NOT removed
-        """).fetchone()[0]) # type: ignore
+        """).fetchone()[0] # type: ignore
+        if tot_street_len is None or tot_street_len == 0:
+            raise Exception("Failed calculating total street length")
+            return
+        tot_street_len = float(tot_street_len)
 
-        # Create dict: neighborhood --> density, ped_len, tot_len
+        # Determine pedestrianization method
         if use_population and use_amenity:
-            density = "n.population * n.amenities / n.area"
-        elif not (use_population or use_amenity):
-            raise ValueError("use_population and use_amenity can't be both false")
+            density = """
+                n.population * n.amenities / n.area
+            """
         elif use_population:
-            density = "n.population / n.area"
+            density = """
+                n.population / n.area
+            """
+        elif use_amenity:
+            density = """
+                n.amenities / n.area
+            """
         else:
-            density = "n.amenities / n.area"
+            raise ValueError(
+                "use_population and use_amenity can't both be false"
+            )
+
+        # Obtain starting score per neighborhood
         initial_df = self.conn.sql(f"""
             WITH ped AS (
-                    SELECT neighborhood_id, SUM(length) AS ped_len
-                    FROM Graph_edges_ped
-                    GROUP BY neighborhood_id
+                SELECT neighborhood_id, SUM(length) AS ped_len
+                FROM Graph_edges_ped
+                GROUP BY neighborhood_id
                 ),
                 car AS (
                     SELECT neighborhood_id, SUM(length) AS car_len
                     FROM Graph_edges
+                    WHERE NOT removed
                     GROUP BY neighborhood_id
                 )
-            SELECT n.id,
+            SELECT n.id AS neighborhood_id,
                    {density} AS density,
-                   COALESCE(p.ped_len, 0) AS ped_len,
-                   COALESCE(p.ped_len, 0) + COALESCE(c.car_len, 0) AS tot_len
+                   COALESCE(p.ped_len, 0.0) AS ped_len,
+                   COALESCE(p.ped_len, 0.0) + COALESCE(c.car_len, 0.0) AS tot_len
             FROM Neighborhoods n
-            JOIN ped p
+            LEFT JOIN ped p
             ON p.neighborhood_id = n.id
             JOIN car c
             ON c.neighborhood_id = n.id
-            ORDER BY density * ped_len / tot_len
         """).df()
-        neighborhoods = defaultdict(list)
-        for row in initial_df.itertuples(index=False):
-            neighborhoods[row.id].append((row.density, row.ped_len, row.tot_len))
 
-        # Create Dict: Neighborhood --> [not_removed_edges]
+        # Neighborhood score dictionary
+        neighborhoods = {}
+        for row in initial_df.itertuples(index=False):
+            neighborhoods[row.neighborhood_id] = {
+                "density": float(row.density), # type: ignore
+                "ped_len": float(row.ped_len), # type: ignore
+                "tot_len": float(row.tot_len), # type: ignore
+            }
+
+        # Get removable edges
         edges_df = self.conn.sql("""
             SELECT u, v, key, length, neighborhood_id
             FROM Graph_edges
             WHERE NOT removed
         """).df()
+
+        # Group edges by neighborhood
         neighborhood_edges = defaultdict(list)
         for row in edges_df.itertuples(index=False):
-            neighborhood_edges[row.neighborhood_id].append((row.u, row.v, row.key, row.length))
+            neighborhood_edges[row.neighborhood_id].append((row.u, row.v, row.key, float(row.length))) # type: ignore
 
-        # Get heapq of neighborhoods sorted by score (to overwrite comparing function I make a class.)
-        class Neighborhood:
-            def __init__(self, id: str, score: int) -> None:
-                self.id = id
-                self.score = score
-            def __lt__(self, other):
-                return self.score > other.score
-        temp = initial_df["id"].to_list()
-        sorted_neighborhoods: list[Neighborhood] = []
-        for zone in temp:
-            try:
-                density, ped_len, tot_len = neighborhoods[zone].pop()
-            except IndexError:
+        # Create heap queue sorting the neighborhoods based on score
+        heap = []
+        for neighborhood_id, score in neighborhoods.items():
+            tot_len = score["tot_len"]
+            if tot_len <= 0:
                 continue
-            sorted_neighborhoods.append(Neighborhood(zone, int(density * ped_len / tot_len)))
-        heapq.heapify(sorted_neighborhoods)
+            score = score["density"] * score["ped_len"] / tot_len
+            heapq.heappush(heap, (-score, neighborhood_id))
 
-        # Iteratively select edges to be removed
-        pedestrianized = 0
+        # Iteratively select edges to remove based on neighborhood scores
+        pedestrianized = 0.0
+        # Lists used to build edges_to_remove table
         to_pedestrianize_u = []
         to_pedestrianize_v = []
         to_pedestrianize_key = []
+        # While the fraction of road to be removed isn't met, transform next edge
+        while (pedestrianized / tot_street_len < fraction and heap):
+            # Best scoring neighborhood (with edges to pedestrianize)
+            _, neighborhood_id = heapq.heappop(heap)
+            if not neighborhood_edges[neighborhood_id]:
+                continue
 
-        while pedestrianized / tot_street_len < fraction:
-            # Get first item sorted list (get info from dict)
-            zone = heapq.heappop(sorted_neighborhoods)
-            try:
-                density, ped_len, tot_len = neighborhoods[zone.id].pop()
-            except IndexError:
-                continue
-            # Pop item from not_removed_edges_df, add to to_pedestrianize
-            try:
-                u,v,key, length = neighborhood_edges[zone.id].pop()
-            except IndexError:
-                continue
-            # Add edge length.
+            # Neighborhood score (related) data
+            score = neighborhoods[neighborhood_id]
+
+            # Get random edge
+            idx = random.randrange(len(neighborhood_edges[neighborhood_id]))
+            u, v, key, length = neighborhood_edges[neighborhood_id].pop(idx)
+
+            # Update total and score values for transformed edge
+            # Then insert neighborhood back into heap (if edges remain)
             pedestrianized += length
-            ped_len += length
+            score["ped_len"] += length
+            if score["tot_len"] > 0:
+                new_score = score["density"] * score["ped_len"] / score["tot_len"]
+                if neighborhood_edges[neighborhood_id]:
+                    heapq.heappush(heap, (-new_score, neighborhood_id))
 
-            # Re-calculate score and insert it in sorted neighborhood list
-            neighborhoods[zone.id].append((density, ped_len, tot_len))
-            zone.score = density * ped_len / tot_len
-            heapq.heappush(sorted_neighborhoods, zone)
-
+            # Save transformed edge to update database later
             to_pedestrianize_u.append(u)
             to_pedestrianize_v.append(v)
             to_pedestrianize_key.append(key)
 
-        # Make result importable (as Pandas DataFrame)
-        to_remove_df =  pd.DataFrame.from_dict({
+        # Create dataframe of the to remove edges and import it into duckdb
+        to_remove_df = pd.DataFrame({
             "u": to_pedestrianize_u,
             "v": to_pedestrianize_v,
             "key": to_pedestrianize_key,
         })
         self.conn.register("to_remove_df", to_remove_df)
-
-        # Import result into duckdb.
-        self.conn.sql(f"""
+        self.conn.sql("""
             CREATE OR REPLACE TEMP TABLE edges_to_remove AS
             SELECT *
             FROM to_remove_df
         """)
 
-        # Remove edges from network
+        # Remove the edges from the network
         ebunch = list(to_remove_df.itertuples(index=False, name=None))
         self.network.transform_edges(ebunch)
 
-        # Update the Graph_edges table with removed edges
+        # Update database with removed edges
+        # Removed tag for edges
         self.conn.sql("""
             UPDATE Graph_edges g
-            SET removed = 'true'
+            SET removed = true
             FROM edges_to_remove r
-            WHERE g.u = r.u AND g.u = r.u AND g.key = r.key
+            WHERE g.u = r.u AND g.v = r.v AND g.key = r.key
         """)
-
-        # Update street count
+        # Recalculate street count
         self.conn.sql("""
-            UPDATE Graph_nodes SET street_count = 0;
-
+            UPDATE Graph_nodes
+            SET street_count = 0
+        """)
+        self.conn.sql("""
             UPDATE Graph_nodes
             SET street_count = sub.degree
-            FROM (SELECT node_id, count(*) AS degree
-                  FROM (
-                      SELECT u AS node_id FROM Graph_edges WHERE removed='false'
-                      UNION ALL
-                      SELECT v AS node_id FROM Graph_edges WHERE removed='false' AND oneway='true'
-                      )
-                  GROUP BY node_id
-                 ) sub
+            FROM (SELECT node_id, COUNT(*) AS degree
+                  FROM (SELECT u AS node_id
+                        FROM Graph_edges
+                        WHERE NOT removed
+                        UNION ALL
+                        SELECT v AS node_id
+                        FROM Graph_edges
+                        WHERE NOT removed AND oneway
+                  )
+                GROUP BY node_id
+            ) sub
             WHERE id = sub.node_id
         """)
 
@@ -1077,3 +1095,34 @@ class Database:
             GROUP BY f.key, t.total
             ORDER BY f.key
         """).df()
+
+    def get_population_distribution(self):
+        """
+        ### Expects:
+            - Pre-process run
+        ### Parameters:
+            - None
+        ### Returns:
+            Dataframe (neighborhood, population)
+        ### Side-effects:
+            - None
+        """
+        return self.conn.sql("""
+            SELECT regio AS neighborhood, population
+            FROM Neighborhoods
+        """).df()
+
+    def get_amenity_pts(self):
+        """
+        ### Expects:
+            - Get features run
+        ### Parameters:
+            - None
+        ### Returns:
+            - (xs, ys)\n
+                Here xs and ys are numpy arrays containing the x and y coordinates of the points respectively
+        ### Side-effects:
+            - None
+        """
+        arrow = self.conn.sql(""" SELECT ST_X(loc) AS x, ST_Y(loc) AS y FROM Features """).to_arrow_table()
+        return (arrow.column("x").to_numpy(), arrow.column("y").to_numpy())

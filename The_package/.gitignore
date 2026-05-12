@@ -2,6 +2,9 @@
 # Global git ignore file. For ignore on subdirs, use gitignore in subdir ##
 ###########################################################################
 
+# Results
+*results_sim_transit_dist*
+
 # Pdf's take a lot of unnessicary space. Compile them from the .typ file.
 *.pdf
 
