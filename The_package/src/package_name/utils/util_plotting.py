@@ -163,7 +163,7 @@ def bar_dist_per_neighborhood(df: gpd.GeoDataFrame, title='', subtitle='', stora
         fig.savefig(os.path.join(storage_folder, name + '.png'), format='png', dpi=settings.png_dpi)
 
 
-def colored_network(DataFrame, graph, data_col_name, title='', subtitle='', colorbar_label='', storage_folder='.', name='colored_network', svg=True, force_linear=False, show_graph=True):
+def colored_network(DataFrame: gpd.GeoDataFrame, graph, data_col_name, title='', subtitle='', colorbar_label='', storage_folder='.', name='colored_network', svg=True, force_linear=False, show_graph=True):
     """
     ### Parameters:
         - df: \n
@@ -205,7 +205,8 @@ def colored_network(DataFrame, graph, data_col_name, title='', subtitle='', colo
 
     # Plot the network
     if show_graph:
-        fig, ax = ox.plot_graph(graph, ax=ax, node_size=0, edge_color='white', edge_linewidth=0.5, show=False, close=False)
+        (b1, b2, b3, b4) = DataFrame.total_bounds
+        fig, ax = ox.plot_graph(graph, ax=ax, node_size=0, edge_color='white', edge_linewidth=0.5, show=False, close=False, bbox=(b1, b2, b3, b4))
 
     # Create the color-bar used for the legenda
     sm = cm.ScalarMappable(norm=norm, cmap=cmap)
