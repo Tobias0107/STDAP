@@ -23,7 +23,7 @@ import random
 
 
 # Importing helper functions from utils
-from package_name.utils.util_OSMnx import get_graph, get_features
+from package_name.utils.util_OSMnx import get_graph, get_features, count_bus_routes
 
 # Importing configuration settings
 from package_name.config.settings import get_settings
@@ -593,7 +593,7 @@ class Database:
                       FROM CBS
                       WHERE gm_naam='{self.city}' AND recs='Buurt') c
                 LEFT JOIN (SELECT c2.id, count(*) as count
-                           FROM features f
+                           FROM Features f
                            JOIN CBS c2
                            ON ST_Within(f.loc, c2.geom)
                            WHERE gm_naam='{self.city}' AND recs='Buurt' AND public_transport IS NULL
@@ -948,6 +948,22 @@ class Database:
             WHERE Bus_stations.feature_id = b.feature_id
             """)
 
+    def move_transit_blank_slate(self):
+        """
+        ### Description
+        Makes use of method described in report.
+        ### Expected:
+            - busses linked (link_busses called)
+        ### Parameters:
+            - None
+        ### Returns:
+            - None
+        ### Side_effects;
+            - (Re)creates table for Bus_stations_to_move.
+            - Updates Bus_stations table with new, moved transit
+        """
+        print(count_bus_routes(self.city, self.conn))
+
     def calculate_distances_to_nearest_transit(self):
         """
         ### Description
@@ -1136,5 +1152,5 @@ class Database:
         ### Side-effects:
             - None
         """
-        arrow = self.conn.sql(""" SELECT ST_X(ST_Centroid(loc)) AS x, ST_Y(ST_Centroid(loc)) AS y FROM Features """).to_arrow_table()
+        arrow = self.conn.sql(""" SELECT ST_X(ST_Centroid(loc)) AS x, ST_Y(ST_Centroid(loc)) AS y FROM Features WHERE bus IS NULL""").to_arrow_table()
         return (arrow.column("x").to_numpy(), arrow.column("y").to_numpy())

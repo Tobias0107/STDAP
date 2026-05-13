@@ -47,6 +47,9 @@ class TestDatabase:
         database.link_busses()
         database.move_transit_minimal()
 
+    def test_move_transit_blank_slate(self):
+        database.move_transit_blank_slate()
+
     def test_get_neighborhood_dist_to_nearest_transit(self):
         database.calculate_distances_to_nearest_transit()
 
