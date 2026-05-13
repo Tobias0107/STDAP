@@ -701,8 +701,6 @@ class Database:
             - Removes edges from graph network
             - Updates street_count in Graph_nodes table
         """
-        one_way_worth = settings.one_way_worth
-
         # Get city total road length
         tot_street_len = self.conn.sql("""
             SELECT SUM(length)
@@ -1103,14 +1101,16 @@ class Database:
         ### Parameters:
             - None
         ### Returns:
-            Dataframe (neighborhood, population)
+            Dataframe (neighborhood, density)
         ### Side-effects:
             - None
         """
-        return self.conn.sql("""
-            SELECT regio AS neighborhood, population
+        df = self.conn.sql("""
+            SELECT regio AS neighborhood, 100 * population / area AS density, ST_AsWKB(geometry) AS wkb
             FROM Neighborhoods
         """).df()
+        df['geometry'] = df['wkb'].apply(lambda x: wkb.loads(bytes(x))) # type: ignore
+        return gpd.GeoDataFrame(df, geometry='geometry', crs='epsg:28992')
 
     def get_amenity_pts(self):
         """

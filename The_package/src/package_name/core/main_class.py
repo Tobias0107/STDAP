@@ -48,8 +48,10 @@ class simulator:
         self.network = Network(city, self.store_in_file, self.storage_dir)
         self.database.set_city(city)
 
-    def Simulate_transit_dist_on_trans(self, fraction: float, *,
-                   print_progress=True, saving_dir="results_sim_transit_dist/"):
+    def Simulate_transit_dist_on_trans(self, fraction: float, *, use_population=True,
+                                       use_amenity=True, simple_move=True, blank_slate=False,
+                                       print_progress=True, saving_dir="results_sim_transit_dist/",
+                                       svg=False):
         """
             ### Description:
                 <Here a short description of the simulation>
@@ -72,5 +74,6 @@ class simulator:
             raise Initializing_error("City not yet initialized. Before running" \
                 "this simulation, call 'choose_city' first. For details, see manual.")
 
-        return Sim_trans_dist.run_simulation(self.network, self.database, fraction,
-                                             print_progress, saving_dir="results_sim_transit_dist/")
+        return Sim_trans_dist.run_simulation(self.network, self.database, fraction, use_population,
+                                             use_amenity, simple_move, blank_slate,
+                                             print_progress, saving_dir, svg)

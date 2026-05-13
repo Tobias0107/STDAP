@@ -8,9 +8,9 @@ import geopandas as gpd
 from package_name.core._classes import Database, Network
 import package_name.utils.util_plotting as plot
 
-def run_simulation(network:Network, database:Database, f: float, use_population=True,
-                   use_amenity=True, simple_move=True, blank_slate=False,
-                   print_progress=True, saving_dir="results_sim_transit_dist/", svg=True):
+def run_simulation(network:Network, database:Database, f: float, use_population: bool,
+                   use_amenity: bool, simple_move: bool, blank_slate: bool,
+                   print_progress: bool, saving_dir: str, svg: bool):
     """
         ### Expects:
             - network == Network(city)
@@ -124,7 +124,8 @@ def run_simulation(network:Network, database:Database, f: float, use_population=
     plot.bar_demographic_average_distance(df=dem_grp_avg_t0,
                                       title=f"{city} before transformation",
                                       storage_folder=saving_dir,
-                                      name=f"{city} before transformation")
+                                      name=f"{city} before transformation",
+                                      svg=svg)
 
     # Bar diagraph after transformation
     if print_progress: print("Plotting demographic average distance after transformation")
@@ -132,7 +133,8 @@ def run_simulation(network:Network, database:Database, f: float, use_population=
                                       title=f"{city} after transformation",
                                       subtitle=f"Neighborhoods lost: {database.lost} ({round((database.lost / database.num_buurten) * 100, 2)})%",
                                       storage_folder=saving_dir,
-                                      name=f"{city} after transformation")
+                                      name=f"{city} after transformation",
+                                      svg=svg)
 
     # Generated points
     if print_progress: print("Plotting all generated points")
@@ -140,24 +142,29 @@ def run_simulation(network:Network, database:Database, f: float, use_population=
                      title=f'Generated points {city}',
                      subtitle=f'Number of points: {xs.size}',
                      storage_folder=saving_dir,
-                     name=f'generated points: {city}')
+                     name=f'generated points: {city}',
+                     svg=svg)
 
     # Amenities
-    # if print_progress: print("Plotting all generated points")
-    # plot.plot_points(amenity_xs, amenity_ys,
-    #                  title=f'Amenities {city}',
-    #                  subtitle='',
-    #                  storage_folder=saving_dir,
-    #                  name=f'Amenities {city}')
+    if print_progress: print("Plotting all generated points")
+    plot.plot_points(amenity_xs, amenity_ys,
+                     title=f'Amenities {city}',
+                     subtitle='',
+                     storage_folder=saving_dir,
+                     name=f'Amenities {city}',
+                     svg=svg)
 
     # # Population distribution
-    # if print_progress: print("Plotting population distribution network")
-    # plot.colored_network(gpd.GeoDataFrame(pop_dist), network.graph_drive,
-    #                      data_col_name='population',
-    #                      title=f"Population distribution {city}",
-    #                      subtitle='',
-    #                      storage_folder=saving_dir,
-    #                      name=f"Population distribution {city}")
+    if print_progress: print("Plotting population-density distribution network")
+    plot.colored_network(pop_dist, '',
+                         data_col_name='density',
+                         title=f"Population-density distribution {city}",
+                         subtitle='in percent',
+                         storage_folder=saving_dir,
+                         name=f"Population-density distribution {city}",
+                         svg=svg,
+                         show_graph=False,
+                         force_linear=True)
 
 
     # Bar diagraphs of distances per neighborhood beforehand
@@ -166,7 +173,8 @@ def run_simulation(network:Network, database:Database, f: float, use_population=
                                     title=f"Distances per neighborhood in {city} beforehand",
                                     subtitle='',
                                     storage_folder=saving_dir,
-                                    name=f"Distances per neighborhood in {city} beforehand")
+                                    name=f"Distances per neighborhood in {city} beforehand",
+                                    svg=svg)
 
     # Bar diagraphs of distances per neighborhood afterwards
     if print_progress: print("Plotting distances per neighborhood afterwards (bar diagraph)")
@@ -174,59 +182,66 @@ def run_simulation(network:Network, database:Database, f: float, use_population=
                                     title=f"Distances per neighborhood in {city} afterwards",
                                     subtitle='',
                                     storage_folder=saving_dir,
-                                    name=f"Distances per neighborhood in {city} afterwards")
+                                    name=f"Distances per neighborhood in {city} afterwards",
+                                    svg=svg)
 
     # both networks beforehand
     if print_progress: print("Creating colored graphs beforehand: car-accessible")
     plot.colored_network(dists_neighborhoods_t0, network.graph_drive,
+                         data_col_name='avg_dist',
                          title=f"Car-accessible network {city} beforehand",
                          subtitle='',
                          storage_folder=saving_dir,
-                         name=f"Car-accessible network {city} beforehand")
+                         name=f"Car-accessible network {city} beforehand",
+                         svg=svg)
 
     if print_progress: print("Creating colored graphs beforehand: pedestrian")
     plot.colored_network(dists_neighborhoods_t0, network.graph_pedestrian,
+                         data_col_name='avg_dist',
                          title=f"Pedestrian network {city} beforehand",
                          subtitle='',
                          storage_folder=saving_dir,
-                         name=f"Pedestrian network {city} beforehand")
+                         name=f"Pedestrian network {city} beforehand",
+                         svg=svg)
 
     # both networks afterwards
     if print_progress: print("Creating colored graphs afterwards: car-accessible")
     plot.colored_network(dists_neighborhoods_t1, network.graph_drive,
+                         data_col_name='avg_dist',
                          title=f"Car-accessible network {city} afterwards",
                          subtitle='',
                          storage_folder=saving_dir,
-                         name=f"Car-accessible network {city} afterwards")
+                         name=f"Car-accessible network {city} afterwards",
+                         svg=svg)
 
     if print_progress: print("Creating colored graphs afterwards: pedestrian")
     plot.colored_network(dists_neighborhoods_t1, network.graph_pedestrian,
+                         data_col_name='avg_dist',
                          title=f"Pedestrian network {city} afterwards",
                          subtitle='',
                          storage_folder=saving_dir,
-                         name=f"Pedestrian network {city} afterwards")
+                         name=f"Pedestrian network {city} afterwards",
+                         svg=svg)
 
     # The difference between the two
     if print_progress: print("Creating colored graphs about the difference before and after: car-accessible")
     dists_neighborhoods_t1['avg_dist'] = dists_neighborhoods_t1['avg_dist'] - dists_neighborhoods_t0['avg_dist']
     plot.colored_network(dists_neighborhoods_t1, G_difference,
+                         data_col_name='avg_dist',
                          title=f"Car-accessible network {city} difference",
                          subtitle='beforehand - afterwards',
                          storage_folder=saving_dir,
                          name=f"Car-accessible network {city} difference",
-                         force_linear=True)
+                         force_linear=True,
+                         svg=svg)
 
     if print_progress: print("Creating colored graphs about the difference before and after: pedestrian")
     plot.colored_network(dists_neighborhoods_t1, G_difference,
+                         data_col_name='avg_dist',
                          title=f"Pedestrian network {city} difference",
                          subtitle='beforehand - afterwards',
                          storage_folder=saving_dir,
                          name=f"Pedestrian network {city} difference",
-                         force_linear=True)
-
-    # Show population distribution
-
-
-    #
-
+                         force_linear=True,
+                         svg=svg)
 
