@@ -746,7 +746,8 @@ class Database:
             SELECT n.id AS neighborhood_id,
                    {density} AS density,
                    COALESCE(p.ped_len, 0.0) AS ped_len,
-                   COALESCE(p.ped_len, 0.0) + COALESCE(c.car_len, 0.0) AS tot_len
+                   COALESCE(p.ped_len, 0.0) + COALESCE(c.car_len, 0.0) AS tot_len,
+                   COALESCE(p.ped_len, 0.0) / (COALESCE(p.ped_len, 0.0) + COALESCE(c.car_len, 0.0)) AS ped_frac
             FROM Neighborhoods n
             LEFT JOIN ped p
             ON p.neighborhood_id = n.id
@@ -754,11 +755,22 @@ class Database:
             ON c.neighborhood_id = n.id
         """).df()
 
+        # Initialize normalization variables
+        density_min = float(initial_df["density"].min())
+        density_max = float(initial_df["density"].max())
+        density_diff = density_max - density_min
+        if density_diff <= 0: density_diff = 1.0
+        fraction_min = float(initial_df["ped_frac"].min())
+        fraction_max = float(initial_df["ped_frac"].max())
+        fraction_diff = fraction_max - fraction_min
+        if fraction_diff <= 0: fraction_diff = 1.0
+
         # Neighborhood score dictionary
         neighborhoods = {}
         for row in initial_df.itertuples(index=False):
+            density_norm = (float(row.density) - density_min) / density_diff # type: ignore
             neighborhoods[row.neighborhood_id] = {
-                "density": float(row.density), # type: ignore
+                "density": float(density_norm), # type: ignore
                 "ped_len": float(row.ped_len), # type: ignore
                 "tot_len": float(row.tot_len), # type: ignore
             }
@@ -781,7 +793,7 @@ class Database:
             tot_len = score["tot_len"]
             if tot_len <= 0:
                 continue
-            score = score["density"] * score["ped_len"] / tot_len
+            score = score["density"] * (score["ped_len"] / score["tot_len"] - fraction_min) / fraction_diff
             heapq.heappush(heap, (-score, neighborhood_id))
 
         # Iteratively select edges to remove based on neighborhood scores
@@ -809,7 +821,7 @@ class Database:
             pedestrianized += length
             score["ped_len"] += length
             if score["tot_len"] > 0:
-                new_score = score["density"] * score["ped_len"] / score["tot_len"]
+                new_score = score["density"] * (score["ped_len"] / score["tot_len"]  - fraction_min) / fraction_diff
                 if neighborhood_edges[neighborhood_id]:
                     heapq.heappush(heap, (-new_score, neighborhood_id))
 
