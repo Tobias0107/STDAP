@@ -23,7 +23,7 @@ import random
 
 
 # Importing helper functions from utils
-from package_name.utils.util_OSMnx import get_graph, get_features, count_bus_routes
+from package_name.utils.util_OSMnx import get_graph, get_features
 
 # Importing configuration settings
 from package_name.config.settings import get_settings
@@ -329,7 +329,7 @@ class Database:
         except Exception:
             pass
         try:
-            self.conn.sql(f"SELECT * FROM Bus_stations LIMIT {limit}").to_csv("Bus_stations_database_preview.csv")
+            self.conn.sql(f"SELECT * FROM Stations LIMIT {limit}").to_csv("Stations_database_preview.csv")
         except Exception:
             pass
         try:
@@ -354,6 +354,10 @@ class Database:
             pass
         try:
             self.conn.sql(f"SELECT * FROM Graph_edges_ped LIMIT {limit}").to_csv("Graph_edges_ped_database_preview.csv")
+        except Exception:
+            pass
+        try:
+            self.conn.sql(f"SELECT * FROM Bus_routes LIMIT {limit}").to_csv("Bus_routes_database_preview.csv")
         except Exception:
             pass
 
@@ -886,13 +890,13 @@ class Database:
         ### Returns:
             - None
         ### Side_effects;
-            - Creates table Bus_stations linking busstations to nodes. (If it doesn't exist already)
+            - Creates table Stations linking busstations to nodes. (If it doesn't exist already)
         """
         # Link bus-stations to nodes (create table Bus_stations)
         self.conn.sql(f"""
-            CREATE TABLE IF NOT EXISTS Bus_stations AS
-            SELECT f.id AS feature_id, n.id AS node_id, f.loc
-            FROM (SELECT * FROM Features WHERE bus IS NOT NULL) f
+            CREATE TABLE IF NOT EXISTS Stations AS
+            SELECT f.id AS feature_id, n.id AS node_id, f.loc, f.bus, f.train, f.railway
+            FROM (SELECT * FROM Features WHERE bus='yes' OR train='yes' OR railway='stop') f
             JOIN Graph_nodes n
             ON ST_DWithin(f.loc, n.loc, {settings.transit_max_edge_dist})
             QUALIFY row_number() OVER (PARTITION BY f.element, f.id ORDER BY ST_Distance(f.loc, n.loc) ASC) = 1
@@ -917,7 +921,7 @@ class Database:
             - None
         ### Side_effects;
             - (Re)creates table for Bus_stations_to_move.
-            - Updates Bus_stations table with new, moved transit
+            - Updates Stations table with new, moved transit
         """
         # Get minimal pairs with smallest distance between the two.
         self.conn.sql(f"""
@@ -926,10 +930,10 @@ class Database:
                    isolated_busses.node_id AS old_node, node_candidates.id AS new_node,
                    isolated_busses.loc AS old_loc, node_candidates.loc AS new_loc
             FROM (SELECT b.node_id, b.feature_id, b.loc
-                  FROM Bus_stations b
+                  FROM Stations b
                   JOIN Graph_nodes n
                   ON b.node_id = n.id
-                  WHERE street_count < 2
+                  WHERE n.street_count < 2 AND b.bus='yes'
                  ) isolated_busses
             JOIN (SELECT DISTINCT id, loc
                   FROM Graph_nodes_accessible
@@ -940,12 +944,12 @@ class Database:
                                        ORDER BY ST_Distance(isolated_busses.loc, node_candidates.loc) ASC) = 1
         """)
 
-        # Update Bus_stations with new, moved transit.
+        # Update Stations with new, moved transit.
         self.conn.sql("""
-            UPDATE Bus_stations
+            UPDATE Stations
             SET node_id = b.new_node
             FROM Bus_stations_to_move b
-            WHERE Bus_stations.feature_id = b.feature_id
+            WHERE Stations.feature_id = b.feature_id
             """)
 
     def move_transit_blank_slate(self):
@@ -960,9 +964,59 @@ class Database:
             - None
         ### Side_effects;
             - (Re)creates table for Bus_stations_to_move.
-            - Updates Bus_stations table with new, moved transit
+            - Updates Stations table with new, moved transit
         """
-        print(count_bus_routes(self.city, self.conn))
+        # Candidate start-end points == train/metro stations.
+        # Subquery to select train stations (bus stops )
+        train_metro = """
+            SELECT f.id, s.node_id, f.loc
+            FROM Stations s
+            JOIN Features f
+            ON s.feature_id = f.id
+            WHERE f.railway='stop' OR f.train='yes'
+        """
+        # Create origin-destination pairs, start routes with origin as stop 0
+        origin_dest = f"""
+            SELECT s1.id, s1.loc, s2.id, s2.loc, s1.id, s1.loc, 0
+            FROM ({train_metro}) s1
+            JOIN ({train_metro}) s2
+            ON s1.id < s2.id
+        """
+        # Recursively determine possible bus routes, creates table
+        self.conn.sql(f"""
+            CREATE OR REPLACE TABLE Bus_routes AS
+            WITH RECURSIVE routes(origin, origin_loc, dest, dest_loc, stop, stop_loc, stop_number) AS (
+                -- Base table
+                ({origin_dest})
+                    UNION
+                -- Recursive step: adding next stop to the table
+                SELECT r.origin, r.origin_loc, r.dest, r.dest_loc, n.id, n.loc, r.stop_number + 1
+                FROM routes r
+                -- Select from candidate bus stops:
+                JOIN Graph_nodes_accessible n
+                -- Condition: Maximum distance between stops
+                ON ST_DWithin(r.stop_loc, n.loc, {settings.max_distance_stops})
+                WHERE
+                    -- Condition: Maximum bus_route length
+                    r.stop_number < {settings.max_stops_in_bus_route}
+                    -- Condition: Minimum distance between stops
+                    AND ST_Distance(r.stop_loc, n.loc) > {settings.min_distance_stops}
+                    -- Condition: Closer to destination
+                    AND ST_Distance(n.loc, r.dest_loc) < ST_Distance(r.stop_loc, r.dest_loc)
+                    -- Condition: Further from origin
+                    AND ST_Distance(n.loc, r.origin_loc) > ST_Distance(r.stop_loc, r.origin_loc)
+                -- Select closest stop qualifying
+                QUALIFY row_number()
+                    OVER(PARTITION BY r.origin, r.dest
+                         ORDER BY ST_Distance(r.stop_loc, n.loc) ASC) = 1
+            )
+            FROM routes;
+        """)
+
+
+        # Create table of possible routes through graph_nodes_accessible
+
+
 
     def calculate_distances_to_nearest_transit(self):
         """
@@ -981,8 +1035,8 @@ class Database:
         ped_transit_np = self.conn.sql("""
             SELECT n.pedestrian_node_id
             FROM Graph_nodes_accessible n
-            JOIN Bus_stations b
-            ON n.id = b.node_id
+            JOIN Stations s
+            ON n.id = s.node_id
         """).fetchnumpy()
         ped_transit = ped_transit_np['pedestrian_node_id'].tolist()
 

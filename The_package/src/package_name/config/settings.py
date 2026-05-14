@@ -126,6 +126,21 @@ class Settings:
                   "to be merged, and obtain the nodes in the driving network accessible by the "\
                   "pedestrian network."}
     )
+    min_distance_stops: int = field(
+        default=300,
+        metadata={"description": "The minimal distance in meter between transit stops."\
+                  "Only used for the blank slate transit stop relocation."}
+    )
+    max_distance_stops: int = field(
+        default=800,
+        metadata={"description": "The maximum distance in meter between transit stops."\
+                  "Only used for the blank slate transit stop relocation."}
+    )
+    max_stops_in_bus_route: int = field(
+        default=20,
+        metadata={"description": "The maximum number of stops in a single bus route."
+                  "Only used for the blank slate transit stop relocation."}
+    )
 
     ###########################################################################
     ##################### Visualization settings ##############################

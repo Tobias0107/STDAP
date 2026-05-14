@@ -1,4 +1,4 @@
-== Package structure 
+== Package structure
 /*
   I did some basic / quick reading into creating packages in python.
   As our package would be super simpel I sugest creating it manually.
@@ -52,7 +52,7 @@ The_git_page/
 This was suggested by chat-gpt, but I did read into the basics of python packages, and it does seem like a good structure. I suggest making the folder structure at least, but most files and folders can start of empty (toml, readme, LICENSE, gui, tests, examples, ...).
 
 === Core and main class
-Main_class would be the class that users will import when using the package. The main class has methods for every functionality provided by the package. It's methods are actually written in separate files, to support maintainability. 
+Main_class would be the class that users will import when using the package. The main class has methods for every functionality provided by the package. It's methods are actually written in separate files, to support maintainability.
 
 === Gui
 The gui should use the main_class to implement a gui for that main_class. This should be build only when the main class is finished. Python packages exist to build gui dashboards (Tkinder)
@@ -88,7 +88,7 @@ demographic_info consists of multiple columns all containing information about d
 This table contains all nodes within the urban street network, including basic information about the node to be stored. (One entry (row) per node)
 
 == Graph_edges
-This table contains all edges within the urban street network, including basic information about the edge. 
+This table contains all edges within the urban street network, including basic information about the edge.
 
 == Neighborhood
 The Neighborhood class is the cleaned up version of CBS. It contains only information about neighborhoods ("Buurten") for the specific city chosen. Some of the columns are pre-processed to contain more relevant information like the population density.
