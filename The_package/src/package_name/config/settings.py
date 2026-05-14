@@ -141,6 +141,11 @@ class Settings:
         metadata={"description": "The maximum number of stops in a single bus route."
                   "Only used for the blank slate transit stop relocation."}
     )
+    min_stops_in_bus_route: int = field(
+        default=9,
+        metadata={"description": "The maximum number of stops in a single bus route."
+                  "Only used for the blank slate transit stop relocation."}
+    )
 
     ###########################################################################
     ##################### Visualization settings ##############################

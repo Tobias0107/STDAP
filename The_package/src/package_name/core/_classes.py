@@ -977,7 +977,7 @@ class Database:
         """
         # Create origin-destination pairs, start routes with origin as stop 0
         origin_dest = f"""
-            SELECT s1.id, s1.loc, s2.id, s2.loc, s1.id, s1.loc, 0
+            SELECT s1.id, s1.loc, s2.id, s2.loc, s1.id, s1.loc, [s1.id], 0
             FROM ({train_metro}) s1
             JOIN ({train_metro}) s2
             ON s1.id < s2.id
@@ -985,12 +985,14 @@ class Database:
         # Recursively determine possible bus routes, creates table
         self.conn.sql(f"""
             CREATE OR REPLACE TABLE Bus_routes AS
-            WITH RECURSIVE routes(origin, origin_loc, dest, dest_loc, stop, stop_loc, stop_number) AS (
+            WITH RECURSIVE routes(origin, origin_loc, dest, dest_loc, stop, stop_loc, path_list, stop_number)
+                USING KEY (origin, dest)
+            AS (
                 -- Base table
                 ({origin_dest})
                     UNION
                 -- Recursive step: adding next stop to the table
-                SELECT r.origin, r.origin_loc, r.dest, r.dest_loc, n.id, n.loc, r.stop_number + 1
+                SELECT r.origin, r.origin_loc, r.dest, r.dest_loc, n.id, n.loc, list_append(r.path_list, n.id), r.stop_number + 1
                 FROM routes r
                 -- Select from candidate bus stops:
                 JOIN Graph_nodes_accessible n
@@ -1010,11 +1012,15 @@ class Database:
                     OVER(PARTITION BY r.origin, r.dest
                          ORDER BY ST_Distance(r.stop_loc, n.loc) ASC) = 1
             )
-            FROM routes;
+            FROM routes
+            -- Bus stops having too little stops are removed.
+            WHERE stop_number > {settings.min_stops_in_bus_route}
         """)
 
+        # Filter routes based on score
+        self.conn.sql("""
 
-        # Create table of possible routes through graph_nodes_accessible
+        """)
 
 
 
