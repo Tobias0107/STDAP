@@ -995,7 +995,7 @@ class Database:
                 SELECT r.origin, r.origin_loc, r.dest, r.dest_loc, n.id, n.loc, list_append(r.path_list, n.id), r.stop_number + 1
                 FROM routes r
                 -- Select from candidate bus stops:
-                JOIN Graph_nodes_accessible n
+                JOIN (SELECT DISTINCT id, loc FROM Graph_nodes_accessible) n
                 -- Condition: Maximum distance between stops
                 ON ST_DWithin(r.stop_loc, n.loc, {settings.max_distance_stops})
                 WHERE
@@ -1023,7 +1023,7 @@ class Database:
             -- Pre-calculate score/node
             WITH Node_scores AS (
                 SELECT g.id as node_id, (n.population + 100 * n.amenities) AS score
-                FROM Graph_nodes_accessible g
+                FROM (SELECT DISTINCT id, loc, neighborhood_id FROM Graph_nodes_accessible) g
                 JOIN Neighborhoods n
                 ON g.neighborhood_id = n.id
             )
@@ -1034,20 +1034,39 @@ class Database:
             ON t.node_id = s.node_id
             GROUP BY ALL
         """)
+        # Obtain Bus-stop Count
+        bus_count = int(self.conn.sql("""
+            (SELECT count(*) FROM Stations WHERE bus IS NOT NULL)
+        """).fetchone()[0]) # type: ignore
+
+        # Remove old bus-stops from Stations
+        self.conn.sql("""
+            DELETE FROM Stations WHERE bus IS NOT NULL
+        """)
         # Select top routes and insert stops into Stations table
         # Stop count may have a deviation (see below)
         deviation = int((settings.max_stops_in_bus_route - settings.min_stops_in_bus_route) / 2)
         self.conn.sql(f"""
-            -- Determine original number of transit stops
-            SELECT stop_number, route_score, path_list
-            FROM Selected_routes
-            QUALIFY sum(stop_number)
-            OVER (ORDER BY route_score DESC) <=
-                        (SELECT count(*) + {deviation} FROM Stations WHERE bus IS NOT NULL)
+            INSERT INTO Stations(node_id, loc, bus)
+            -- Flatten path_list, and give nodes maximum route_scores
+            WITH Scored_nodes AS (
+                SELECT flat.node_id, max(r.route_score) AS score
+                FROM Selected_routes r,
+                unnest(r.path_list) AS flat(node_id)
+                GROUP BY flat.node_id
+            ),
+            -- Select best_scoring nodes only
+            Selected_stops AS (
+                SELECT node_id
+                FROM Scored_nodes
+                ORDER BY score
+                LIMIT {bus_count}
+            )
+            SELECT s.node_id, n.loc, 'yes'
+            FROM Selected_stops s
+            JOIN (SELECT DISTINCT id, loc FROM Graph_nodes_accessible) n
+            ON s.node_id = n.id
         """)
-
-        self.conn.sql("SELECT * FROM Selected_routes").to_csv("Selected_routes.csv")
-
 
     def calculate_distances_to_nearest_transit(self):
         """
@@ -1064,7 +1083,7 @@ class Database:
         """
         # Get Sources = Transit stops (as they are less points)
         ped_transit_np = self.conn.sql("""
-            SELECT n.pedestrian_node_id
+            SELECT DISTINCT n.pedestrian_node_id
             FROM Graph_nodes_accessible n
             JOIN Stations s
             ON n.id = s.node_id
