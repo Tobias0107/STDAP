@@ -1017,11 +1017,36 @@ class Database:
             WHERE stop_number > {settings.min_stops_in_bus_route}
         """)
 
-        # Filter routes based on score
-        self.conn.sql("""
-
+        # Score the routes
+        self.conn.sql(f"""
+            CREATE OR REPLACE TEMP TABLE Selected_routes AS
+            -- Pre-calculate score/node
+            WITH Node_scores AS (
+                SELECT g.id as node_id, (n.population + 100 * n.amenities) AS score
+                FROM Graph_nodes_accessible g
+                JOIN Neighborhoods n
+                ON g.neighborhood_id = n.id
+            )
+            SELECT DISTINCT ON (route_score) r.*, sum(s.score) AS route_score
+            FROM Bus_routes r,
+            unnest(r.path_list) AS t(node_id)
+            JOIN Node_scores s
+            ON t.node_id = s.node_id
+            GROUP BY ALL
+        """)
+        # Select top routes and insert stops into Stations table
+        # Stop count may have a deviation (see below)
+        deviation = int((settings.max_stops_in_bus_route - settings.min_stops_in_bus_route) / 2)
+        self.conn.sql(f"""
+            -- Determine original number of transit stops
+            SELECT stop_number, route_score, path_list
+            FROM Selected_routes
+            QUALIFY sum(stop_number)
+            OVER (ORDER BY route_score DESC) <=
+                        (SELECT count(*) + {deviation} FROM Stations WHERE bus IS NOT NULL)
         """)
 
+        self.conn.sql("SELECT * FROM Selected_routes").to_csv("Selected_routes.csv")
 
 
     def calculate_distances_to_nearest_transit(self):
