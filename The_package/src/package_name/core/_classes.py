@@ -1,10 +1,6 @@
 """
     This file contains all class definitions except for the main class.
     For details, please see the UML or manual.
-
-    TODO: Informatieverlies printen. By test:
-        - 4 door geen punten binnen neighborhood (radius=30)
-        - Rest door geen voetpad in buurt van punten.
 """
 
 # Importing packages
@@ -968,18 +964,18 @@ class Database:
         """
         # Candidate start-end points == train/metro stations.
         # Subquery to select train stations (bus stops )
-        train_metro = """
+        candidate_source_dest = """
             SELECT f.id, s.node_id, f.loc
             FROM Stations s
             JOIN Features f
             ON s.feature_id = f.id
-            WHERE f.railway='stop' OR f.train='yes'
+            WHERE f.railway='stop' OR f.train='yes' OR f.railway='tram_stop'
         """
         # Create origin-destination pairs, start routes with origin as stop 0
         origin_dest = f"""
             SELECT s1.id, s1.loc, s2.id, s2.loc, s1.id, s1.loc, [s1.id], 0
-            FROM ({train_metro}) s1
-            JOIN ({train_metro}) s2
+            FROM ({candidate_source_dest}) s1
+            JOIN ({candidate_source_dest}) s2
             ON s1.id < s2.id
         """
         # Recursively determine possible bus routes, creates table
@@ -1022,7 +1018,7 @@ class Database:
             CREATE OR REPLACE TEMP TABLE Selected_routes AS
             -- Pre-calculate score/node
             WITH Node_scores AS (
-                SELECT g.id as node_id, (n.population + 100 * n.amenities) AS score
+                SELECT g.id as node_id, (n.population + {settings.amenity_to_pop_weight} * n.amenities) AS score
                 FROM (SELECT DISTINCT id, loc, neighborhood_id FROM Graph_nodes_accessible) g
                 JOIN Neighborhoods n
                 ON g.neighborhood_id = n.id
@@ -1257,4 +1253,19 @@ class Database:
             - None
         """
         arrow = self.conn.sql(""" SELECT ST_X(ST_Centroid(loc)) AS x, ST_Y(ST_Centroid(loc)) AS y FROM Features WHERE bus IS NULL""").to_arrow_table()
+        return (arrow.column("x").to_numpy(), arrow.column("y").to_numpy())
+
+    def get_transit_pts(self):
+        """
+        ### Expects:
+            - Link busses run
+        ### Parameters:
+            - None
+        ### Returns:
+            - (xs, ys)\n
+                Here xs and ys are numpy arrays containing the x and y coordinates of the points respectively
+        ### Side-effects:
+            - None
+        """
+        arrow = self.conn.sql(""" SELECT ST_X(ST_Centroid(loc)) AS x, ST_Y(ST_Centroid(loc)) AS y FROM Stations""").to_arrow_table()
         return (arrow.column("x").to_numpy(), arrow.column("y").to_numpy())

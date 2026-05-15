@@ -20,49 +20,32 @@ def run_simulation(network:Network, database:Database, f: float, use_population:
         ### Parameters:
             - network (Network)
             - database (Database)
-            - f (float)\n
-                fraction of the car-accessible streets to transform to pedestrian
-            - gender: \n
-                If True: displays simulation results for gender
-            - age: \n
-                If True: displays simulation results for age
-            - ethnicity: \n
-                If True: displays simulation results for ethnicity
-            - SES: \n
-                If True: displays simulation results for Social Economic Status (SES)
-            - Save_old_network: \n
-                If True: saves the network pre-transformation in png format
-            - Save_new_network: \n
-                If True: saves the network after transformation in png format
-            - color_new_network: \n
-                If True: gives colors to neighborhoods in the network based on the
-                average calculated new distance one has to travel to transit.
-                Red = Big increase (relative to other neighborhoods)
-                Orange = Small increase (relative to other neighborhoods)
-                Yellow = Practically remains the same
-                Light green = Distance is slightly decreased
-                Dark green = Distance is greatly decreased
-            - save_bar_diagram: \n
-                If True: Saves the average results per demographic group in the form of a bar
-                diagram (png).
+            - f (float):\n
+                fraction of the car-accessible street length to transform to pedestrian
+            - use_population (bool):\n
+                If true, factors in the population when pedestrianizing. If False, use_amenity should be True.
+            - use_amenity (bool):\n
+                If true, factors in the amenity when pedestrianizing. If False, use_population should be True.
+            - simple_move (bool):\n
+                If true, uses the minimal/iterative method to move transit stops. simple_move xor blank_slate should be true
+            - blank_slate (bool):\n
+                If true, uses the blank-slate method to move transit stops. simple_move xor blank_slate should be true
             - print_progress: \n
                 If True: Prints the progress of the simulation to stdout. As simulations can take
                 a long time this is highly recommended.
-            - print_simulation_steps: \n
-                If True: Prints the current simulation step to stdout. This can provide for more
-                insight in the simulation progress.
             - saving_dir: \n
                 The directory to save the results (if any).
-
+            - svg: \n
+                If True: uses svg format for results, png otherwise.
         ### Returns:
-            - The average results aper demographic group in the form of a dictionary
+            - The average results per demographic group in the form of a dictionary
         ### Side effects:
             - Removes edges from network
             - Adds tables to database
             - Creates files containing visualizations
     """
 
-    if print_progress: print(f"\nRunning simulation for {database.city}\n\n")
+    if print_progress: print(f"\n\nRunning single fraction pedestrianization simulation for {database.city}\n\n")
 
     # Storing original network (for difference network)
     if print_progress: print("Storing original network (for difference network)")
@@ -80,6 +63,8 @@ def run_simulation(network:Network, database:Database, f: float, use_population:
     database.create_pts_per_neighborhood()
     if print_progress: print("Linking bus_stations to the network")
     database.link_busses()
+    if print_progress: print("Storing pre-simulation bus-stop locations")
+    bus_xs_t0, bus_ys_t0 = database.get_transit_pts()
 
     # Run simulation
     if print_progress: print("Calculating walking distances to public transit")
@@ -95,7 +80,8 @@ def run_simulation(network:Network, database:Database, f: float, use_population:
     if print_progress: print(f"Removing {f * 100}% of the driving network length")
     database.remove_f_edges(f, use_population, use_amenity)
     if print_progress: print("Moving transit")
-    database.move_transit_minimal()
+    if simple_move: database.move_transit_minimal()
+    elif blank_slate: database.move_transit_blank_slate()
     if print_progress: print("Re-calculating distances to public transit")
     database.calculate_distances_to_nearest_transit()
 
@@ -112,6 +98,8 @@ def run_simulation(network:Network, database:Database, f: float, use_population:
     if print_progress: print("Retrieving population and amenity distribution")
     pop_dist = database.get_population_distribution()
     amenity_xs, amenity_ys = database.get_amenity_pts()
+    if print_progress: print("Retrieving after-simulation bus-stop locations")
+    bus_xs_t1, bus_ys_t1 = database.get_transit_pts()
 
     ###########################################################################
     # Visualization ###########################################################
@@ -122,18 +110,18 @@ def run_simulation(network:Network, database:Database, f: float, use_population:
     # Bar diagraph before transformation
     if print_progress: print("Plotting demographic average distance before transformation")
     plot.bar_demographic_average_distance(df=dem_grp_avg_t0,
-                                      title=f"{city} before transformation",
+                                      title=f"dem_grp distance {city} before transformation",
                                       storage_folder=saving_dir,
-                                      name=f"{city} before transformation",
+                                      name=f"dem_grp distance {city} before transformation",
                                       svg=svg)
 
     # Bar diagraph after transformation
     if print_progress: print("Plotting demographic average distance after transformation")
     plot.bar_demographic_average_distance(df=dem_grp_avg_t1,
-                                      title=f"{city} after transformation",
+                                      title=f"dem_grp distance {city} after transformation",
                                       subtitle=f"Neighborhoods lost: {database.lost} ({round((database.lost / database.num_buurten) * 100, 2)})%",
                                       storage_folder=saving_dir,
-                                      name=f"{city} after transformation",
+                                      name=f"dem_grp distance {city} after transformation",
                                       svg=svg)
 
     # Generated points
@@ -153,6 +141,23 @@ def run_simulation(network:Network, database:Database, f: float, use_population:
                      storage_folder=saving_dir,
                      name=f'Amenities {city}',
                      svg=svg)
+
+    # Bus stops before and after
+    if print_progress: print("Plotting pre-simulation bus-stops")
+    plot.plot_points(bus_xs_t0, bus_ys_t0,
+                     title=f'pre-simulation bus-stops: {city}',
+                     subtitle=f'Number of stops: {bus_xs_t0.size}',
+                     storage_folder=saving_dir,
+                     name=f'pre-simulation bus-stops: {city}',
+                     svg=svg)
+    if print_progress: print("Plotting after-simulation bus-stops")
+    plot.plot_points(bus_xs_t1, bus_ys_t1,
+                     title=f'after-simulation bus-stops: {city}',
+                     subtitle=f'Number of stops: {bus_xs_t1.size}',
+                     storage_folder=saving_dir,
+                     name=f'after-simulation bus-stops: {city}',
+                     svg=svg)
+
 
     # # Population distribution
     if print_progress: print("Plotting population-density distribution network")

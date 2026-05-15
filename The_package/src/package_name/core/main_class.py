@@ -17,7 +17,7 @@ from package_name.exceptions import Initializing_error
 
 
 # Import Simulations from core
-import package_name.core._simulation_transit_distance as Sim_trans_dist
+import package_name.core._sim_trans_dist_single as Sim_trans_dist
 
 # Import helper functions from utils
 # none yet

@@ -127,12 +127,12 @@ class Settings:
                   "pedestrian network."}
     )
     min_distance_stops: int = field(
-        default=300,
+        default=100,
         metadata={"description": "The minimal distance in meter between transit stops."\
                   "Only used for the blank slate transit stop relocation."}
     )
     max_distance_stops: int = field(
-        default=800,
+        default=300,
         metadata={"description": "The maximum distance in meter between transit stops."\
                   "Only used for the blank slate transit stop relocation."}
     )
@@ -145,6 +145,11 @@ class Settings:
         default=9,
         metadata={"description": "The maximum number of stops in a single bus route."
                   "Only used for the blank slate transit stop relocation."}
+    )
+    amenity_to_pop_weight: int = field(
+        default=20,
+        metadata={"description": "Used for the scoring formula used by the blank-slate method"
+                  "Score = pop_size + amenity_to_pop_weight * num_amenities"}
     )
 
     ###########################################################################
