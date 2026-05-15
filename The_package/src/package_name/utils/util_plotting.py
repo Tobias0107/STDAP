@@ -231,6 +231,61 @@ def colored_network(DataFrame: gpd.GeoDataFrame, graph, data_col_name, title='',
     else:
         fig.savefig(os.path.join(storage_folder, name + '.png'), dpi=settings.png_dpi)
 
+def DataFrame(DataFrame: pd.DataFrame, x_col:str, y_col:str, label_col:str,
+                   xlabel:str, ylabel:str, title='', subtitle='', storage_folder='.',
+                   name='DataFrame', svg=True, multiple_figures=False):
+    # Shared code
+    if not os.path.isdir(storage_folder):
+            os.makedirs(storage_folder)
+
+    if not multiple_figures:
+        # Creating the plot basis (one plot)
+        fig, ax = plt.subplots()
+        for label, grp in DataFrame.groupby(label_col):
+            ax.plot(
+                grp[x_col],
+                grp[y_col],
+                label=label
+            )
+
+        # Set title and labels
+        plt.suptitle(title)
+        plt.title(subtitle, fontsize=8)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.legend()
+
+        # Save plot
+        if svg:
+            fig.savefig(os.path.join(storage_folder, name + '.svg'))
+        else:
+            fig.savefig(os.path.join(storage_folder, name + '.png'), dpi=settings.png_dpi)
+
+    else:
+        for label, grp in DataFrame.groupby(label_col):
+
+            # Create plot basis (single line, single figure)
+            fig, ax = plt.subplots()
+            ax.plot(
+                grp[x_col],
+                grp[y_col],
+                label=label
+            )
+
+            # Set title and labels
+            plt.suptitle(title)
+            plt.title(subtitle, fontsize=8)
+            ax.set_xlabel(xlabel)
+            ax.set_ylabel(ylabel)
+            ax.legend()
+
+            # Save plot
+            if svg:
+                fig.savefig(os.path.join(storage_folder, str(label) + name + '.svg'))
+            else:
+                fig.savefig(os.path.join(storage_folder, str(label) + name + '.png'), dpi=settings.png_dpi)
+
+
 def plot_t_walk_map(gdf, storage_folder="debug", name="t_walk", show=False):
     """
     ### Expected:

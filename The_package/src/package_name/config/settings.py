@@ -168,7 +168,9 @@ class Settings:
     color_normalization: Callable[..., mcolor.Normalize] = field(
         default=lambda vmin, vmax: mcolor.SymLogNorm(linthresh=1, vmin=vmin, vmax=vmax),
         metadata={"description": "The normalization used to assign colors to values in the colored network. "
-                  "It should be a valid matplotlib normalization"}
+                  "It should be a valid matplotlib normalization. The default function is "
+                  "matplotlib.mcolor.SymLogNorm() with a linthresh of 1. The function should"
+                  "take a vmin and vmax argument."}
     )
     legend_num_labels: int = field(
         default=10,

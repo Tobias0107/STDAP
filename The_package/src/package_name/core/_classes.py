@@ -1142,6 +1142,7 @@ class Database:
         ### Returns:
             - Pandas DataFrame (dem_grp, avg_dist):\n
               Demographic groups are the following:
+                - avg --> This is the population average
                 - male
                 - female
                 - 0-14

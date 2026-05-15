@@ -18,6 +18,7 @@ from package_name.exceptions import Initializing_error
 
 # Import Simulations from core
 import package_name.core._sim_trans_dist_single as Sim_trans_dist
+import package_name.core._sim_trans_dist_multiple as Sim_trans_dist_fn
 
 # Import helper functions from utils
 # none yet
@@ -77,3 +78,32 @@ class simulator:
         return Sim_trans_dist.run_simulation(self.network, self.database, fraction, use_population,
                                              use_amenity, simple_move, blank_slate,
                                              print_progress, saving_dir, svg)
+
+    def Sim_trans_dist_multiple(self, f_start, f_end, fn, *, use_population=True,
+                                use_amenity=True, simple_move=True, blank_slate=False,
+                                print_progress=True, saving_dir="results_sim_transit_dist/", svg=False):
+        """
+            ### Description:
+                <Here a short description of the simulation>
+            ### Expects:
+                - load_city method called previously
+            ### Parameters:
+                - network (Network)
+                - database (Database)
+                - f (float)\n
+                    fraction of the car-accessible streets to transform to pedestrian
+                - print_progress: \n
+                    If True: Prints the progress of the simulation to stdout. As simulations can take
+                    a long time this is highly recommended.
+                - saving_dir: \n
+                    The directory to save the results (if any).
+            ### Returns:
+                - The average results aper demographic group in the form of a dictionary
+        """
+        if (self.network == None):
+            raise Initializing_error("City not yet initialized. Before running" \
+                "this simulation, call 'choose_city' first. For details, see manual.")
+
+        return Sim_trans_dist_fn.run_simulation(self.network, self.database, f_start, f_end, fn, use_population,
+                                                use_amenity, simple_move, blank_slate,
+                                                print_progress, saving_dir, svg)

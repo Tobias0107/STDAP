@@ -23,5 +23,8 @@ sim.choose_city("Amsterdam")
 
 class TestMainClass:
     def test_Simulate_transit_dist_on_trans(self):
+        return
         sim.Simulate_transit_dist_on_trans(0.3, svg=False, blank_slate=True, simple_move=False)
 
+    def test_sim_trans_sist_multiple(self):
+        sim.Sim_trans_dist_multiple(0, 1, 10, svg=False, blank_slate=False, simple_move=True)

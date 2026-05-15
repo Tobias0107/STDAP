@@ -85,11 +85,13 @@ def run_simulation(network:Network, database:Database, f: float, use_population:
     if print_progress: print("Re-calculating distances to public transit")
     database.calculate_distances_to_nearest_transit()
 
-    # Get resulting information
+    # Get resulting information (basic)
     if print_progress: print("Averaging distance to transit per neighborhood afterwards")
     dists_neighborhoods_t1 = database.get_dist_per_neighborhood()
     if print_progress: print("Averaging distance per demographic group afterwards")
     dem_grp_avg_t1 = database.get_demographic_average_distance()
+
+    # Get specific information
     if print_progress: print("Retrieving generated points (for visualization)")
     xs, ys = database.obtain_generated_pts()
     if print_progress: print("Creating difference network")
