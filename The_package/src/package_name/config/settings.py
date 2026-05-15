@@ -127,12 +127,12 @@ class Settings:
                   "pedestrian network."}
     )
     min_distance_stops: int = field(
-        default=100,
+        default=300,
         metadata={"description": "The minimal distance in meter between transit stops."\
                   "Only used for the blank slate transit stop relocation."}
     )
     max_distance_stops: int = field(
-        default=300,
+        default=800,
         metadata={"description": "The maximum distance in meter between transit stops."\
                   "Only used for the blank slate transit stop relocation."}
     )
@@ -161,12 +161,12 @@ class Settings:
         metadata={"description": "The dpi used when generating visualizations using the 'png' format."}
     )
     colormap: str = field(
-        default='viridis_r',
-        metadata={"description": "The colormap used to color the networks based on distance. "
+        default='RdBu_r',
+        metadata={"description": "viridis_r, The colormap used to color the networks based on distance. "
                   "Should be a valid matplotlib colormap"}
     )
     color_normalization: Callable[..., mcolor.Normalize] = field(
-        default=mcolor.LogNorm,
+        default=lambda vmin, vmax: mcolor.SymLogNorm(linthresh=1, vmin=vmin, vmax=vmax),
         metadata={"description": "The normalization used to assign colors to values in the colored network. "
                   "It should be a valid matplotlib normalization"}
     )

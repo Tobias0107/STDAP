@@ -194,7 +194,7 @@ def colored_network(DataFrame: gpd.GeoDataFrame, graph, data_col_name, title='',
     if force_linear:
         norm = plt.Normalize(v_min, v_max) # type: ignore
     else:
-        norm = settings.color_normalization(max(v_min, 1), v_max) # type: ignore
+        norm = settings.color_normalization(v_min, v_max) # type: ignore
     cmap = mpl.colormaps[settings.colormap]
 
     # Add use Colormap to determine the color for every neighborhood

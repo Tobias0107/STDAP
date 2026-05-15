@@ -7,8 +7,9 @@ import networkx as nx
 import geopandas as gpd
 from package_name.core._classes import Database, Network
 import package_name.utils.util_plotting as plot
+import numpy as np
 
-def run_simulation(network:Network, database:Database, f_start, f_end, n_steps, use_population: bool,
+def run_simulation(network:Network, database:Database, f_start, f_end, step_size, use_population: bool,
                    use_amenity: bool, simple_move: bool, blank_slate: bool,
                    print_progress: bool, saving_dir: str, svg: bool):
     """
@@ -46,4 +47,6 @@ def run_simulation(network:Network, database:Database, f_start, f_end, n_steps, 
     """
 
     if print_progress: print(f"\n\nRunning multiple fractions pedestrianization simulation for {database.city}\n\n")
+
+    rng = np.arange(f_start, f_end, step_size)
 

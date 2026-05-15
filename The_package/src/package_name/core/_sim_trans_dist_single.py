@@ -237,7 +237,6 @@ def run_simulation(network:Network, database:Database, f: float, use_population:
                          subtitle='beforehand - afterwards',
                          storage_folder=saving_dir,
                          name=f"Car-accessible network {city} difference",
-                         force_linear=True,
                          svg=svg)
 
     if print_progress: print("Creating colored graphs about the difference before and after: pedestrian")
@@ -247,6 +246,6 @@ def run_simulation(network:Network, database:Database, f: float, use_population:
                          subtitle='beforehand - afterwards',
                          storage_folder=saving_dir,
                          name=f"Pedestrian network {city} difference",
-                         force_linear=True,
                          svg=svg)
 
+    return dem_grp_avg_t1
