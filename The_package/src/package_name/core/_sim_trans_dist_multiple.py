@@ -118,12 +118,11 @@ def run_simulation(network:Network, database:Database, f_start, f_end, fn, use_p
                    label_col='dem_grp',
                    xlabel='Fraction pedestrianized',
                    ylabel='Average distance',
-                   title=f'Distance nearest transit: {database.city}',
+                   title=f'Average distance per fraction: {database.city}',
                    subtitle='',
                    storage_folder=saving_dir,
-                   name=f'Distance nearest transit: {database.city}',
+                   name=f'Average distance per fraction. {database.city}',
                    svg=svg,
-                   multiple_figures=False)
+                   multiple_figures=True)
 
-    # dem_grp_avgs["city"] = database.city
     return dem_grp_avgs

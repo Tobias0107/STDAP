@@ -14,6 +14,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import gc
+from itertools import product
+
 
 csv = "tests/TestDatasets/kwb2024.csv"
 geopackage = "tests/TestDatasets/geopackage.gpkg"
@@ -60,15 +62,15 @@ class TestMultipleFractions:
 
         # 6 different simulation options
         for ((pop, amenity, ped_method),
-             (minimal, blank, mv_method)) in zip(ped_opt, bus_mv_opt):
+             (minimal, blank, mv_method)) in product(ped_opt, bus_mv_opt):
             if show_progress: print(f"\n\nSimulating using the {ped_method} method and the {mv_method} method.\n\n")
 
             # Store results to calculate avg for entire Netherlands
             multiple_lst: list[pd.DataFrame] = []
 
             # For every city
-            # for i, city in enumerate(sim.get_cities()):
-            for i, city in enumerate(["Amsterdam", "Groningen", "Almere", "Rotterdam"]):
+            for i, city in enumerate(sim.get_cities()):
+            # for i, city in enumerate(["Amsterdam", "Groningen", "Almere", "Rotterdam"]):
                 if show_progress: print(f"\nSimulating city {i}: {city}\n")
 
                 # Choose city
@@ -83,7 +85,7 @@ class TestMultipleFractions:
                                                                     minimal_move=minimal,
                                                                     blank_slate=blank,
                                                                     print_progress=show_progress,
-                                                                    saving_dir=os.path.join(folder, ped_method, mv_method, str(city)),
+                                                                    saving_dir=os.path.join(folder, ped_method, mv_method, "fraction_range", str(city)),
                                                                     svg=svg_format))
 
                     # Generate results for interesting fractions
@@ -93,7 +95,7 @@ class TestMultipleFractions:
                                             minimal_move=minimal,
                                             blank_slate=blank,
                                             print_progress=show_progress,
-                                            saving_dir=os.path.join(folder, ped_method, mv_method, str(city)),
+                                            saving_dir=os.path.join(folder, ped_method, mv_method, "individual_fractions", f"{min_1}%", str(city)),
                                             svg=svg_format)
                     sim.Sim_trans_dist_single(min_2,
                                             use_population=pop,
@@ -101,7 +103,7 @@ class TestMultipleFractions:
                                             minimal_move=minimal,
                                             blank_slate=blank,
                                             print_progress=show_progress,
-                                            saving_dir=os.path.join(folder, ped_method, mv_method, str(city)),
+                                            saving_dir=os.path.join(folder, ped_method, mv_method, "individual_fractions", f"{min_2}%", str(city)),
                                             svg=svg_format)
                     sim.Sim_trans_dist_single(blank_1,
                                             use_population=pop,
@@ -109,11 +111,11 @@ class TestMultipleFractions:
                                             minimal_move=minimal,
                                             blank_slate=blank,
                                             print_progress=show_progress,
-                                            saving_dir=os.path.join(folder, ped_method, mv_method, str(city)),
+                                            saving_dir=os.path.join(folder, ped_method, mv_method, "individual_fractions", f"{blank_1}%", str(city)),
                                             svg=svg_format)
                     gc.collect()
                 except Exception as e:
-                    print("Local authority is most likely not a city. Skipping city")
+                    print(f"! Encountered error ({e}).\n If not during plotting: {city} likely misses key amenities / networks and is most likely not a city.\nSkipping to next city...\n")
                 plt.close("all")
 
             # Plot Netherlands average

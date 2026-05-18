@@ -109,55 +109,55 @@ def run_simulation(network:Network, database:Database, f: float, use_population:
 
     city = database.city
 
-    # Bar diagraph before transformation
-    if print_progress: print("Plotting demographic average distance before transformation")
+    # Bar diagraph before pedestrianization
+    if print_progress: print("Plotting demographic average distance before pedestrianization")
     plot.bar_demographic_average_distance(df=dem_grp_avg_t0,
-                                      title=f"dem_grp distance {city} before transformation",
+                                      title=f"Average distance per demographic group before pedestrianization: {city}",
                                       storage_folder=saving_dir,
-                                      name=f"dem_grp distance {city} before transformation",
+                                      name=f"Average distance per demographic group  before pedestrianization",
                                       svg=svg)
 
-    # Bar diagraph after transformation
-    if print_progress: print("Plotting demographic average distance after transformation")
+    # Bar diagraph after pedestrianization
+    if print_progress: print("Plotting demographic average distance after pedestrianization")
     plot.bar_demographic_average_distance(df=dem_grp_avg_t1,
-                                      title=f"dem_grp distance {city} after transformation",
+                                      title=f"Average distance per demographic group after pedestrianization: {city}",
                                       subtitle=f"Neighborhoods lost: {database.lost} ({round((database.lost / database.num_buurten) * 100, 2)})%",
                                       storage_folder=saving_dir,
-                                      name=f"dem_grp distance {city} after transformation",
+                                      name=f"Average distance per demographic group after pedestrianization",
                                       svg=svg)
 
     # Generated points
     if print_progress: print("Plotting all generated points")
     plot.plot_points(xs, ys,
-                     title=f'Generated points {city}',
-                     subtitle=f'Number of points: {xs.size}',
+                     title=f'Generated points: {city}',
+                     subtitle=f'Number of points: {xs.size}\nNeighborhoods lost: {database.lost} ({round((database.lost / database.num_buurten) * 100, 2)})%',
                      storage_folder=saving_dir,
-                     name=f'generated points: {city}',
+                     name=f'Generated points',
                      svg=svg)
 
     # Amenities
     if print_progress: print("Plotting all generated points")
     plot.plot_points(amenity_xs, amenity_ys,
-                     title=f'Amenities {city}',
-                     subtitle='',
+                     title=f'Amenities: {city}',
+                     subtitle=f'Number of amenities: {amenity_xs.size}',
                      storage_folder=saving_dir,
-                     name=f'Amenities {city}',
+                     name=f'Amenities',
                      svg=svg)
 
     # Bus stops before and after
-    if print_progress: print("Plotting pre-simulation bus-stops")
+    if print_progress: print("Plotting pre-pedestrianization bus-stops")
     plot.plot_points(bus_xs_t0, bus_ys_t0,
-                     title=f'pre-simulation bus-stops: {city}',
+                     title=f'bus-stops before pedestrianization: {city}',
                      subtitle=f'Number of stops: {bus_xs_t0.size}',
                      storage_folder=saving_dir,
-                     name=f'pre-simulation bus-stops: {city}',
+                     name=f'bus-stops before pedestrianization',
                      svg=svg)
-    if print_progress: print("Plotting after-simulation bus-stops")
+    if print_progress: print("Plotting after-pedestrianization bus-stops")
     plot.plot_points(bus_xs_t1, bus_ys_t1,
-                     title=f'after-simulation bus-stops: {city}',
+                     title=f'bus-stops after pedestrianization: {city}',
                      subtitle=f'Number of stops: {bus_xs_t1.size}',
                      storage_folder=saving_dir,
-                     name=f'after-simulation bus-stops: {city}',
+                     name=f'bus-stops after pedestrianization',
                      svg=svg)
 
 
@@ -165,10 +165,10 @@ def run_simulation(network:Network, database:Database, f: float, use_population:
     if print_progress: print("Plotting population-density distribution network")
     plot.colored_network(pop_dist, '',
                          data_col_name='density',
-                         title=f"Population-density distribution {city}",
-                         subtitle='in percent',
+                         title=f"Population-density distribution: {city}",
+                         subtitle='%',
                          storage_folder=saving_dir,
-                         name=f"Population-density distribution {city}",
+                         name=f"Population-density distribution",
                          svg=svg,
                          show_graph=False,
                          force_linear=True)
@@ -177,77 +177,69 @@ def run_simulation(network:Network, database:Database, f: float, use_population:
     # Bar diagraphs of distances per neighborhood beforehand
     if print_progress: print("Plotting distances per neighborhood beforehand (bar diagraph)")
     plot.bar_dist_per_neighborhood(dists_neighborhoods_t0,
-                                    title=f"Distances per neighborhood in {city} beforehand",
+                                    title=f"Neighborhood distances (m) before pedestrianization: {city}",
                                     subtitle='',
                                     storage_folder=saving_dir,
-                                    name=f"Distances per neighborhood in {city} beforehand",
+                                    name=f"Neighborhood distances before pedestrianization",
                                     svg=svg)
 
     # Bar diagraphs of distances per neighborhood afterwards
     if print_progress: print("Plotting distances per neighborhood afterwards (bar diagraph)")
     plot.bar_dist_per_neighborhood(dists_neighborhoods_t1,
-                                    title=f"Distances per neighborhood in {city} afterwards",
+                                    title=f"Neighborhood distances (m) after pedestrianization: {city}",
                                     subtitle='',
                                     storage_folder=saving_dir,
-                                    name=f"Distances per neighborhood in {city} afterwards",
+                                    name=f"Neighborhood distances after pedestrianization",
                                     svg=svg)
 
     # both networks beforehand
-    if print_progress: print("Creating colored graphs beforehand: car-accessible")
+    if print_progress: print("Creating colored graphs before pedestrianization: car-accessible")
     plot.colored_network(dists_neighborhoods_t0, network.graph_drive,
                          data_col_name='avg_dist',
-                         title=f"Car-accessible network {city} beforehand",
-                         subtitle='',
+                         title=f"Car-accessible network before pedestrianization: {city}",
+                         subtitle='+ distance',
                          storage_folder=saving_dir,
-                         name=f"Car-accessible network {city} beforehand",
+                         name=f"Car-accessible network before pedestrianization",
                          svg=svg)
 
-    if print_progress: print("Creating colored graphs beforehand: pedestrian")
+    if print_progress: print("Creating colored graphs before pedestrianization: pedestrian")
     plot.colored_network(dists_neighborhoods_t0, network.graph_pedestrian,
                          data_col_name='avg_dist',
-                         title=f"Pedestrian network {city} beforehand",
-                         subtitle='',
+                         title=f"Pedestrian network before pedestrianization: {city}",
+                         subtitle='+ distance',
                          storage_folder=saving_dir,
-                         name=f"Pedestrian network {city} beforehand",
+                         name=f"Pedestrian network before pedestrianization",
                          svg=svg)
 
-    # both networks afterwards
-    if print_progress: print("Creating colored graphs afterwards: car-accessible")
+    # both networks after pedestrianization
+    if print_progress: print("Creating colored graphs after pedestrianization: car-accessible")
     plot.colored_network(dists_neighborhoods_t1, network.graph_drive,
                          data_col_name='avg_dist',
-                         title=f"Car-accessible network {city} afterwards",
-                         subtitle='',
+                         title=f"Car-accessible network after pedestrianization: {city}",
+                         subtitle='+ distance',
                          storage_folder=saving_dir,
-                         name=f"Car-accessible network {city} afterwards",
+                         name=f"Car-accessible network after pedestrianization",
                          svg=svg)
 
-    if print_progress: print("Creating colored graphs afterwards: pedestrian")
+    if print_progress: print("Creating colored graphs after pedestrianization: pedestrian")
     plot.colored_network(dists_neighborhoods_t1, network.graph_pedestrian,
                          data_col_name='avg_dist',
-                         title=f"Pedestrian network {city} afterwards",
-                         subtitle='',
+                         title=f"Pedestrian network after pedestrianization: {city}",
+                         subtitle='+ distance',
                          storage_folder=saving_dir,
-                         name=f"Pedestrian network {city} afterwards",
+                         name=f"Pedestrian network after pedestrianization",
                          svg=svg)
 
-    # The difference between the two
-    if print_progress: print("Creating colored graphs about the difference before and after: car-accessible")
-    dists_neighborhoods_t1['avg_dist'] = dists_neighborhoods_t1['avg_dist'] - dists_neighborhoods_t0['avg_dist']
-    plot.colored_network(dists_neighborhoods_t1, G_difference,
-                         data_col_name='avg_dist',
-                         title=f"Car-accessible network {city} difference",
-                         subtitle='beforehand - afterwards',
-                         storage_folder=saving_dir,
-                         name=f"Car-accessible network {city} difference",
-                         svg=svg)
-
-    if print_progress: print("Creating colored graphs about the difference before and after: pedestrian")
-    plot.colored_network(dists_neighborhoods_t1, G_difference,
-                         data_col_name='avg_dist',
-                         title=f"Pedestrian network {city} difference",
-                         subtitle='beforehand - afterwards',
-                         storage_folder=saving_dir,
-                         name=f"Pedestrian network {city} difference",
-                         svg=svg)
+    # The difference between the two (Only if f != 0.0)
+    if f > 0.001:
+        if print_progress: print("Creating colored graphs about the difference before and after")
+        dists_neighborhoods_t1['avg_dist'] = dists_neighborhoods_t1['avg_dist'] - dists_neighborhoods_t0['avg_dist']
+        plot.colored_network(dists_neighborhoods_t1, G_difference,
+                            data_col_name='avg_dist',
+                            title=f"Pedestrianized network: {city}",
+                            subtitle='+ increased distance',
+                            storage_folder=saving_dir,
+                            name=f"Pedestrianized network",
+                            svg=svg)
 
     return dem_grp_avg_t1
