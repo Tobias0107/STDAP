@@ -19,11 +19,6 @@ import package_name.config.functions as functions
 
 @dataclass
 class Settings:
-    example: int = field(
-        default=0,
-        metadata={"description": "Here the description"}
-    )
-
     ###########################################################################
     ##################### Data importation settings ###########################
     ###########################################################################
@@ -95,13 +90,6 @@ class Settings:
                     "Import default with 'import package_name.config.functions.Poisson_distribution' "\
                     "This function should return a numpy NDarray consisting of a list of points. "\
                     "Points are lists of 2 elements in the form [x, y]"}
-    )
-    one_way_worth: float = field(
-        default=0.7,
-        metadata={"description": "The worth of a one way street, as compared to "\
-                  "two way streets. The parameter is used for simulations that remove "\
-                  "streets from driving networks. Setting this to zero would fully prioritize "\
-                  "removing 2-way streets before 1-way streets"}
     )
     transit_max_edge_dist: int = field(
         default=30,

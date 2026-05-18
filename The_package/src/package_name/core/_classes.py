@@ -643,6 +643,10 @@ class Database:
             "ys":ys
         })
 
+        self.conn.sql("""
+            DELETE FROM Neighborhood_pts
+        """)
+
         # Import dataframe to duckdb
         # Remove pts outside neighborhood
         # Points linked to ped_network by closest node within transit_max_pts_dist
@@ -893,11 +897,11 @@ class Database:
         ### Returns:
             - None
         ### Side_effects;
-            - Creates table Stations linking busstations to nodes. (If it doesn't exist already)
+            - (Re)creates table Stations linking busstations to nodes.
         """
         # Link bus-stations to nodes (create table Bus_stations)
         self.conn.sql(f"""
-            CREATE TABLE IF NOT EXISTS Stations AS
+            CREATE OR REPLACE TABLE Stations AS
             SELECT f.id AS feature_id, n.id AS node_id, f.loc, f.bus, f.train, f.railway
             FROM (SELECT * FROM Features WHERE bus='yes' OR train='yes' OR railway='stop') f
             JOIN Graph_nodes n

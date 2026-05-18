@@ -6,6 +6,8 @@ import osmnx as ox
 import networkx as nx
 import pandas as pd
 import geopandas as gpd
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import matplotlib as mpl
@@ -231,6 +233,18 @@ def colored_network(DataFrame: gpd.GeoDataFrame, graph, data_col_name, title='',
     else:
         fig.savefig(os.path.join(storage_folder, name + '.png'), dpi=settings.png_dpi)
 
+
+def DataFrames(DataFrames: list[pd.DataFrame], x_col:str, y_col:str, label_col:str,
+                   xlabel:str, ylabel:str, title='', subtitle='', storage_folder='.',
+                   name='DataFrame', svg=True, multiple_figures=False):
+    combined = pd.concat(DataFrames, ignore_index=True)
+    avg_df = (
+        combined
+        .groupby([label_col, x_col], as_index=False)[y_col]
+        .mean()
+    )
+
+
 def DataFrame(DataFrame: pd.DataFrame, x_col:str, y_col:str, label_col:str,
                    xlabel:str, ylabel:str, title='', subtitle='', storage_folder='.',
                    name='DataFrame', svg=True, multiple_figures=False):
@@ -242,6 +256,7 @@ def DataFrame(DataFrame: pd.DataFrame, x_col:str, y_col:str, label_col:str,
     # Creating the plot basis (one plot)
     fig, ax = plt.subplots()
     for label, grp in DataFrame.groupby(label_col):
+        grp = grp.sort_values(x_col)
         ax.plot(
             grp[x_col],
             grp[y_col],

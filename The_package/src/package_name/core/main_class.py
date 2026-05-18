@@ -49,8 +49,8 @@ class simulator:
         self.network = Network(city, self.store_in_file, self.storage_dir)
         self.database.set_city(city)
 
-    def Simulate_transit_dist_on_trans(self, fraction: float, *, use_population=True,
-                                       use_amenity=True, simple_move=True, blank_slate=False,
+    def Sim_trans_dist_single(self, fraction: float, *, use_population=True,
+                                       use_amenity=True, minimal_move=True, blank_slate=False,
                                        print_progress=True, saving_dir="results_sim_transit_dist/",
                                        svg=False):
         """
@@ -76,11 +76,11 @@ class simulator:
                 "this simulation, call 'choose_city' first. For details, see manual.")
 
         return Sim_trans_dist.run_simulation(self.network, self.database, fraction, use_population,
-                                             use_amenity, simple_move, blank_slate,
+                                             use_amenity, minimal_move, blank_slate,
                                              print_progress, saving_dir, svg)
 
     def Sim_trans_dist_multiple(self, f_start, f_end, fn, *, use_population=True,
-                                use_amenity=True, simple_move=True, blank_slate=False,
+                                use_amenity=True, minimal_move=True, blank_slate=False,
                                 print_progress=True, saving_dir="results_sim_transit_dist/", svg=False):
         """
             ### Description:
@@ -105,5 +105,5 @@ class simulator:
                 "this simulation, call 'choose_city' first. For details, see manual.")
 
         return Sim_trans_dist_fn.run_simulation(self.network, self.database, f_start, f_end, fn, use_population,
-                                                use_amenity, simple_move, blank_slate,
+                                                use_amenity, minimal_move, blank_slate,
                                                 print_progress, saving_dir, svg)

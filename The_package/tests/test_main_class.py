@@ -22,9 +22,9 @@ sim = simulator(csv, geopackage, store_in_file=True)
 sim.choose_city("Amsterdam")
 
 class TestMainClass:
-    def test_Simulate_transit_dist_on_trans(self):
+    def test_Sim_trans_dist_single(self):
         return
-        sim.Simulate_transit_dist_on_trans(0.3, svg=False, blank_slate=False, simple_move=True)
+        sim.Sim_trans_dist_single(0.3, svg=False, blank_slate=False, minimal_move=True)
 
     def test_sim_trans_sist_multiple(self):
-        sim.Sim_trans_dist_multiple(0, 1, 100, svg=False, blank_slate=False, simple_move=True)
+        sim.Sim_trans_dist_multiple(0, 0.5, 100, svg=False, blank_slate=True, minimal_move=False)
