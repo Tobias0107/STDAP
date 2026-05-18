@@ -705,12 +705,21 @@ class Database:
         tot_street_len = self.conn.sql("""
             SELECT SUM(length)
             FROM Graph_edges
-            WHERE NOT removed
         """).fetchone()[0] # type: ignore
-        if tot_street_len is None or tot_street_len == 0:
+        if tot_street_len is None:
             raise Exception("Failed calculating total street length")
             return
         tot_street_len = float(tot_street_len)
+
+        # Get currently pedestrianized
+        pedestrianized = self.conn.sql("""
+            SELECT SUM(length)
+            FROM Graph_edges
+            WHERE removed
+        """).fetchone()[0] # type: ignore
+        if pedestrianized is None:
+            pedestrianized = 0.0
+        pedestrianized = float(pedestrianized)
 
         # Determine pedestrianization method
         if use_population and use_amenity:
@@ -796,8 +805,6 @@ class Database:
             score = score["density"] * (score["ped_len"] / score["tot_len"] - fraction_min) / fraction_diff
             heapq.heappush(heap, (-score, neighborhood_id))
 
-        # Iteratively select edges to remove based on neighborhood scores
-        pedestrianized = 0.0
         # Lists used to build edges_to_remove table
         to_pedestrianize_u = []
         to_pedestrianize_v = []

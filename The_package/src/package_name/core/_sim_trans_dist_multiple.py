@@ -84,21 +84,21 @@ def run_simulation(network:Network, database:Database, f_start, f_end, fn, use_p
     rng: np.typing.NDArray[np.float64] = np.linspace(f_start, f_end, fn)
     for f in rng.astype(float):
 
-        if print_progress: print(f"(f: {f}) Removing {f * 100}% of the driving network length")
+        if print_progress: print(f"(f: {round(f, 2)}) Removing {round(f * 100, 2)}% of the driving network length")
         database.remove_f_edges(f, use_population, use_amenity)
 
-        if print_progress and simple_move: print(f"(f: {f}) Moving invalid transit stops to nearest valid place")
+        if print_progress and simple_move: print(f"(f: {round(f, 2)}) Moving invalid transit stops to nearest valid place")
         if simple_move: database.move_transit_minimal()
-        if print_progress and blank_slate: print(f"(f: {f}) Using blank slate method to re-generate transit stops")
+        if print_progress and blank_slate: print(f"(f: {round(f, 2)}) Using blank slate method to re-generate transit stops")
         if blank_slate: database.move_transit_blank_slate()
 
-        if print_progress: print(f"(f: {f}) Re-calculating distances to public transit")
+        if print_progress: print(f"(f: {round(f, 2)}) Re-calculating distances to public transit")
         database.calculate_distances_to_nearest_transit()
 
-        if print_progress: print(f"(f: {f}) Retrieving average distance per neighborhood")
+        if print_progress: print(f"(f: {round(f, 2)}) Retrieving average distance per neighborhood")
         neighborhood_dists.append(database.get_dist_per_neighborhood())
 
-        if print_progress: print(f"(f: {f}) Retrieving average distance per demographic group")
+        if print_progress: print(f"(f: {round(f, 2)}) Retrieving average distance per demographic group")
         df = database.get_demographic_average_distance()
         df["f"] = f
         dem_grp_avg_lst.append(df)

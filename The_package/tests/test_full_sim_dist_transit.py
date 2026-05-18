@@ -1,5 +1,7 @@
 """
-    The tests for the main class, and its simulation methods
+    This file contains the full simulation performed for the paper:
+    Modeling Pedestrianization in Dutch Urban Street Networks: Impacts on Transit
+    Accessibility for different Demographic Groups
 """
 
 from package_name.core.main_class import simulator
@@ -18,13 +20,10 @@ settings.dataset_nullstring = ['       .', '.', '']
 settings.neighborhood_distribution = lambda a, b, c, d : Poisson_distribution(a, b, c, d, radius=30)
 
 
-sim = simulator(csv, geopackage, store_in_file=True)
-sim.choose_city("Amsterdam")
+class TestMultipleFractions:
+    def test_main(self):
+        sim = simulator(csv, geopackage, store_in_file=True)
+        for city in sim.get_cities():
+            sim.choose_city(str(city))
 
-class TestMainClass:
-    def test_Simulate_transit_dist_on_trans(self):
-        return
-        sim.Simulate_transit_dist_on_trans(0.3, svg=False, blank_slate=False, simple_move=True)
 
-    def test_sim_trans_sist_multiple(self):
-        sim.Sim_trans_dist_multiple(0, 1, 100, svg=False, blank_slate=False, simple_move=True)

@@ -238,30 +238,31 @@ def DataFrame(DataFrame: pd.DataFrame, x_col:str, y_col:str, label_col:str,
     if not os.path.isdir(storage_folder):
             os.makedirs(storage_folder)
 
-    if not multiple_figures:
-        # Creating the plot basis (one plot)
-        fig, ax = plt.subplots()
-        for label, grp in DataFrame.groupby(label_col):
-            ax.plot(
-                grp[x_col],
-                grp[y_col],
-                label=label
-            )
 
-        # Set title and labels
-        plt.suptitle(title)
-        plt.title(subtitle, fontsize=8)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-        ax.legend()
+    # Creating the plot basis (one plot)
+    fig, ax = plt.subplots()
+    for label, grp in DataFrame.groupby(label_col):
+        ax.plot(
+            grp[x_col],
+            grp[y_col],
+            label=label
+        )
 
-        # Save plot
-        if svg:
-            fig.savefig(os.path.join(storage_folder, name + '.svg'))
-        else:
-            fig.savefig(os.path.join(storage_folder, name + '.png'), dpi=settings.png_dpi)
+    # Set title and labels
+    plt.suptitle(title)
+    plt.title(subtitle, fontsize=8)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    fig.tight_layout()
 
+    # Save plot
+    if svg:
+        fig.savefig(os.path.join(storage_folder, name + '.svg'))
     else:
+        fig.savefig(os.path.join(storage_folder, name + '.png'), dpi=settings.png_dpi)
+
+    if multiple_figures:
         for label, grp in DataFrame.groupby(label_col):
 
             # Create plot basis (single line, single figure)
