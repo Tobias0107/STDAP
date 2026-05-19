@@ -65,12 +65,9 @@ class TestMultipleFractions:
              (minimal, blank, mv_method)) in product(ped_opt, bus_mv_opt):
             if show_progress: print(f"\n\nSimulating using the {ped_method} method and the {mv_method} method.\n\n")
 
-            # Store results to calculate avg for entire Netherlands
-            multiple_lst: list[pd.DataFrame] = []
-
             # For every city
-            for i, city in enumerate(sim.get_cities()):
-            # for i, city in enumerate(["Amsterdam", "Groningen", "Almere", "Rotterdam"]):
+            # for i, city in enumerate(sim.get_cities()):
+            for i, city in enumerate(["Amsterdam", "Groningen", "Almere", "Rotterdam"]):
                 if show_progress: print(f"\nSimulating city {i}: {city}\n")
 
                 # Choose city
@@ -79,14 +76,20 @@ class TestMultipleFractions:
 
                 try:
                     # Simulate for all fractions
-                    multiple_lst.append(sim.Sim_trans_dist_multiple(f_start, f_stop, fn,
-                                                                    use_population=pop,
-                                                                    use_amenity=amenity,
-                                                                    minimal_move=minimal,
-                                                                    blank_slate=blank,
-                                                                    print_progress=show_progress,
-                                                                    saving_dir=os.path.join(folder, ped_method, mv_method, "fraction_range", str(city)),
-                                                                    svg=svg_format))
+                    df = sim.Sim_trans_dist_multiple(f_start, f_stop, fn,
+                                                     use_population=pop,
+                                                     use_amenity=amenity,
+                                                     minimal_move=minimal,
+                                                     blank_slate=blank,
+                                                     print_progress=show_progress,
+                                                     saving_dir=os.path.join(folder, ped_method, mv_method, "fraction_range", str(city)),
+                                                     svg=svg_format)
+                    # Store in file to spare RAM
+                    storage_folder = os.path.join("network_cache", ped_method, mv_method)
+                    if not os.path.isdir(storage_folder):
+                        os.makedirs(storage_folder)
+                    df.to_parquet(os.path.join(storage_folder, str(city) + ".parquet"))
+                    del df
 
                     # Generate results for interesting fractions
                     sim.Sim_trans_dist_single(min_1,
@@ -113,10 +116,24 @@ class TestMultipleFractions:
                                             print_progress=show_progress,
                                             saving_dir=os.path.join(folder, ped_method, mv_method, "individual_fractions", f"{blank_1}%", str(city)),
                                             svg=svg_format)
+                    # Against memory problems
+                    del sim
+                    sim = simulator(csv, geopackage, store_in_file=cache_networks)
+                    plt.close("all")
                     gc.collect()
                 except Exception as e:
                     print(f"! Encountered error ({e}).\n If not during plotting: {city} likely misses key amenities / networks and is most likely not a city.\nSkipping to next city...\n")
-                plt.close("all")
+                    plt.close("all")
+                    gc.collect()
+
+            # Store results to calculate avg for entire Netherlands
+            multiple_lst: list[pd.DataFrame] = []
+            for city in sim.get_cities():
+                try:
+                    df = pd.read_parquet(os.path.join("network_cache", ped_method, mv_method, str(city) + ".parquet"))
+                    multiple_lst.append(df)
+                except Exception:
+                    pass
 
             # Plot Netherlands average
             plot.DataFrames(multiple_lst,
@@ -131,5 +148,3 @@ class TestMultipleFractions:
                     name=f'Distance nearest transit: Netherlands',
                     svg=svg_format,
                     multiple_figures=True)
-
-

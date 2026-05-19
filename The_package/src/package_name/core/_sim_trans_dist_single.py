@@ -211,27 +211,27 @@ def run_simulation(network:Network, database:Database, f: float, use_population:
                          name=f"Pedestrian network before pedestrianization",
                          svg=svg)
 
-    # both networks after pedestrianization
-    if print_progress: print("Creating colored graphs after pedestrianization: car-accessible")
-    plot.colored_network(dists_neighborhoods_t1, network.graph_drive,
-                         data_col_name='avg_dist',
-                         title=f"Car-accessible network after pedestrianization: {city}",
-                         subtitle='+ distance',
-                         storage_folder=saving_dir,
-                         name=f"Car-accessible network after pedestrianization",
-                         svg=svg)
-
-    if print_progress: print("Creating colored graphs after pedestrianization: pedestrian")
-    plot.colored_network(dists_neighborhoods_t1, network.graph_pedestrian,
-                         data_col_name='avg_dist',
-                         title=f"Pedestrian network after pedestrianization: {city}",
-                         subtitle='+ distance',
-                         storage_folder=saving_dir,
-                         name=f"Pedestrian network after pedestrianization",
-                         svg=svg)
-
-    # The difference between the two (Only if f != 0.0)
+    # After and difference is only needed if fraction > 0.0
     if f > 0.001:
+        # both networks after pedestrianization
+        if print_progress: print("Creating colored graphs after pedestrianization: car-accessible")
+        plot.colored_network(dists_neighborhoods_t1, network.graph_drive,
+                            data_col_name='avg_dist',
+                            title=f"Car-accessible network after pedestrianization: {city}",
+                            subtitle='+ distance',
+                            storage_folder=saving_dir,
+                            name=f"Car-accessible network after pedestrianization",
+                            svg=svg)
+
+        if print_progress: print("Creating colored graphs after pedestrianization: pedestrian")
+        plot.colored_network(dists_neighborhoods_t1, network.graph_pedestrian,
+                            data_col_name='avg_dist',
+                            title=f"Pedestrian network after pedestrianization: {city}",
+                            subtitle='+ distance',
+                            storage_folder=saving_dir,
+                            name=f"Pedestrian network after pedestrianization",
+                            svg=svg)
+
         if print_progress: print("Creating colored graphs about the difference before and after")
         dists_neighborhoods_t1['avg_dist'] = dists_neighborhoods_t1['avg_dist'] - dists_neighborhoods_t0['avg_dist']
         plot.colored_network(dists_neighborhoods_t1, G_difference,
