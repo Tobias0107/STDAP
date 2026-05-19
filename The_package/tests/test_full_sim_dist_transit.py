@@ -66,8 +66,8 @@ class TestMultipleFractions:
             if show_progress: print(f"\n\nSimulating using the {ped_method} method and the {mv_method} method.\n\n")
 
             # For every city
-            # for i, city in enumerate(sim.get_cities()):
-            for i, city in enumerate(["Amsterdam", "Groningen", "Almere", "Rotterdam"]):
+            for i, city in enumerate(sim.get_cities()):
+            # for i, city in enumerate(["Amsterdam", "Groningen", "Almere", "Rotterdam"]):
                 if show_progress: print(f"\nSimulating city {i}: {city}\n")
 
                 # Choose city
