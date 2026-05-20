@@ -48,9 +48,11 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem,
     QTableWidget,
     QListWidgetItem,
+    QListView
 )
 
 from package_name.config.settings import get_settings
+from package_name.config.functions import Poisson_distribution
 from package_name.core.main_class import simulator
 from package_name.gui._widgets import CollapsibleBox
 
@@ -71,7 +73,7 @@ class SimulationWorker(QObject):
         try:
             self.log.emit("Starting simulation...")
 
-            self.log.emit(f"Selecting city: {self.city}")
+            self.log.emit(f"Importing city network: {self.city}")
 
             self.simulator.choose_city(self.city)
 
@@ -108,7 +110,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         # Create widget
         super().__init__()
-        self.setWindowTitle("Pedestrianization Simulator")
+        self.setWindowTitle("Dashboard")
         self.setMinimumSize(QSize(1200, 800))
 
         # Start parameters
@@ -127,9 +129,9 @@ class MainWindow(QMainWindow):
         self.main_layout.setSpacing(20)
 
         # Title and subtitle
-        header = QLabel("Pedestrianization Simulator Dashboard")
+        header = QLabel("Pedestrianization Simulator")
         header.setObjectName("headerTitle")
-        subtitle = QLabel("Simulation environment for public transport accessibility and pedestrianization analysis.")
+        subtitle = QLabel("Simulate the distance to the nearest transit stop after pedestrianizing a percentage of a cities road length.")
         subtitle.setObjectName("headerSubtitle")
         self.main_layout.addWidget(header)
         self.main_layout.addWidget(subtitle)
@@ -197,6 +199,7 @@ class MainWindow(QMainWindow):
         ###########################################################################
 
         self.sim_box = QComboBox()
+        self.sim_box.setView(QListView())
 
         self.sim_box.addItems([
             "Pedestrianize a single fraction",
@@ -326,7 +329,7 @@ class MainWindow(QMainWindow):
 
         self.column_table.setHorizontalHeaderLabels([
             "Internal field",
-            "Dataset column"
+            "Dataset column name"
         ])
 
         self.column_table.verticalHeader().setVisible(False)
@@ -381,6 +384,7 @@ class MainWindow(QMainWindow):
         ###########################################################################
 
         self.delim_box = QComboBox()
+        self.delim_box.setView(QListView())
 
         self.delim_box.addItems([
             ",",
@@ -403,6 +407,7 @@ class MainWindow(QMainWindow):
         ###########################################################################
 
         self.decimal_box = QComboBox()
+        self.decimal_box.setView(QListView())
 
         self.decimal_box.addItems([
             ".",
@@ -464,7 +469,7 @@ class MainWindow(QMainWindow):
         ##################### Simulation self.settings #################################
         ###########################################################################
 
-        sim_group = QGroupBox("Simulation self.settings")
+        sim_group = QGroupBox("Simulation settings")
 
         sim_layout = QFormLayout()
 
@@ -476,18 +481,16 @@ class MainWindow(QMainWindow):
         # Neighborhood distribution
         ###########################################################################
 
-        self.distribution_box = QComboBox()
+        self.poisson_radius = QSpinBox()
+        self.poisson_radius.setRange(0, 10000)
+        self.poisson_radius.setSuffix(" m")
+        self.poisson_radius.setValue(30)
+        sim_layout.addRow("Poisson radius:",self.poisson_radius)
 
-        self.distribution_box.addItems([
-            "Poisson distribution",
-            "Uniform random",
-            "Grid distribution"
-        ])
-
-        sim_layout.addRow(
-            "Neighborhood distribution:",
-            self.distribution_box
-        )
+        self.poisson_ncandidates = QSpinBox()
+        self.poisson_ncandidates.setRange(0, 10000)
+        self.poisson_ncandidates.setValue(7)
+        sim_layout.addRow("Poisson ncandidates:",self.poisson_ncandidates)
 
         ###########################################################################
         # Distance self.settings
@@ -504,6 +507,8 @@ class MainWindow(QMainWindow):
             "Max transit-edge distance:",
             self.transit_max_edge_dist
         )
+
+
 
         self.transit_max_pts_dist = QSpinBox()
         self.transit_max_pts_dist.setRange(0, 10000)
@@ -649,6 +654,7 @@ class MainWindow(QMainWindow):
         ###########################################################################
 
         self.colormap_box = QComboBox()
+        self.colormap_box.setView(QListView())
 
         self.colormap_box.addItems([
             "viridis",
@@ -670,28 +676,6 @@ class MainWindow(QMainWindow):
         viz_layout.addRow(
             "Colormap:",
             self.colormap_box
-        )
-
-        ###########################################################################
-        # Normalization
-        ###########################################################################
-
-        self.norm_box = QComboBox()
-
-        self.norm_box.addItems([
-            "Linear",
-            "LogNorm",
-            "SymLogNorm",
-            "PowerNorm"
-        ])
-
-        self.norm_box.setCurrentText(
-            "SymLogNorm"
-        )
-
-        viz_layout.addRow(
-            "Color normalization:",
-            self.norm_box
         )
 
         ###########################################################################
@@ -752,12 +736,14 @@ class MainWindow(QMainWindow):
 
         # Every row
         self.city_box = QComboBox()
+        self.city_box.setView(QListView())
         form.addRow("City:", self.city_box)
 
         self.fraction = QDoubleSpinBox()
-        self.fraction.setRange(0.0, 1.0)
-        self.fraction.setSingleStep(0.05)
-        self.fraction.setValue(0.2)
+        self.fraction.setSuffix(" %")
+        self.fraction.setRange(0.0, 100.0)
+        self.fraction.setSingleStep(1.0)
+        self.fraction.setValue(15.0)
         form.addRow("Fraction:", self.fraction)
 
         #######################################################################
@@ -765,16 +751,19 @@ class MainWindow(QMainWindow):
         #######################################################################
 
         self.f_start = QDoubleSpinBox()
-        self.f_start.setRange(0.0, 1.0)
+        self.f_start.setSuffix(" %")
+        self.f_start.setRange(0.0, 100.0)
         self.f_start.setValue(0.0)
         self.f_start.setVisible(False)
 
         self.f_stop = QDoubleSpinBox()
-        self.f_stop.setRange(0.0, 1.0)
-        self.f_stop.setValue(0.5)
+        self.f_stop.setSuffix(" %")
+        self.f_stop.setRange(0.0, 100.0)
+        self.f_stop.setValue(50.0)
         self.f_stop.setVisible(False)
 
         self.fn = QSpinBox()
+        self.fn.setSuffix(" %")
         self.fn.setRange(1, 1000)
         self.fn.setValue(10)
         self.fn.setVisible(False)
@@ -840,9 +829,16 @@ class MainWindow(QMainWindow):
 
         # Create widget real time output
         log_box = CollapsibleBox("Simulation output")
+        log_box.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding
+        )
+        self.log_output.setMinimumHeight(250)
+        # self.log_output.setBaseSize(1000, 250)
         log_layout = QVBoxLayout()
         log_layout.addWidget(self.log_output)
         log_box.setContentLayout(log_layout)
+        # log_box.setBaseSize(1000, 250)
         layout.addWidget(log_box)
 
         return page
@@ -980,17 +976,17 @@ class MainWindow(QMainWindow):
         if self.simulation == 0:
 
             common_kwargs["fraction"] = (
-                self.fraction.value()
+                self.fraction.value() / 100
             )
 
         else:
 
             common_kwargs["f_start"] = (
-                self.f_start.value()
+                self.f_start.value() / 100
             )
 
             common_kwargs["f_end"] = (
-                self.f_stop.value()
+                self.f_stop.value() / 100
             )
 
             common_kwargs["fn"] = (
@@ -1113,7 +1109,34 @@ class MainWindow(QMainWindow):
         }
 
         QLineEdit,
-        QComboBox,
+        QComboBox {
+            background: none;
+            padding: 6px 10px;
+            border: 1px solid #c5c5c5;
+            border-radius: 6px;
+            background: white;
+            min-height: 24px;
+        }
+
+        QComboBox:hover {
+            background: none;
+            border: 1px solid #999999;
+        }
+
+        QComboBox::drop-down {
+            background: none;
+            border: none;
+            width: 24px;
+        }
+
+        QComboBox QAbstractItemView {
+            border: 1px solid #c5c5c5;
+            background: white;
+            selection-background-color: #efefef;
+            selection-color: red;
+            outline: 0px;
+        }
+
         QSpinBox,
         QDoubleSpinBox,
         QTextEdit {
@@ -1207,6 +1230,12 @@ class MainWindow(QMainWindow):
         ###########################################################################
         # Simulation settings
         ###########################################################################
+
+        self.settings.neighborhood_distribution = (
+            lambda a, b, c, d : Poisson_distribution(a, b, c, d,
+                                                     radius=self.poisson_radius.value(),
+                                                     ncanidates=self.poisson_ncandidates.value())
+        )
 
         self.settings.transit_max_edge_dist = (
             self.transit_max_edge_dist.value()

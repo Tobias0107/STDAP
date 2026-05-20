@@ -28,12 +28,20 @@ class CollapsibleBox(QWidget):
 
     def __init__(self, title="", parent=None):
         super().__init__(parent)
+        self.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed
+        )
 
         #######################################################################
         # Toggle button
         #######################################################################
 
         self.toggle_button = QToolButton()
+        self.toggle_button.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed
+        )
         self.toggle_button.setStyleSheet("QToolButton { border: none; }")
         self.toggle_button.setToolButtonStyle(
             Qt.ToolButtonStyle.ToolButtonTextBesideIcon
@@ -48,6 +56,7 @@ class CollapsibleBox(QWidget):
         #######################################################################
 
         self.content_area = QScrollArea()
+        self.content_area.setWidgetResizable(True)
         self.content_area.setStyleSheet(
             "QScrollArea { background-color: white; border: none; }"
         )
@@ -127,6 +136,10 @@ class CollapsibleBox(QWidget):
         #######################################################################
 
         content = QWidget()
+        content.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Preferred
+        )
         content.setLayout(content_layout)
 
         self.content_area.setWidget(content)
