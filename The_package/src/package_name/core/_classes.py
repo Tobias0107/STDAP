@@ -371,6 +371,7 @@ class Database:
         query = """
             SELECT DISTINCT gm_naam
             FROM CBS
+            ORDER BY gm_naam
             """
         res = self.conn.sql(query).fetchnumpy()
         return res["gm_naam"].tolist()

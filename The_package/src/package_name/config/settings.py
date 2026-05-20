@@ -63,7 +63,7 @@ class Settings:
                   "come from the csv."}
     )
     dataset_nullstring: list[str] = field (
-        default_factory= lambda: ['.'],
+        default_factory= lambda: ['       .', '.', ''],
         metadata={"description": "The character used for the NULL values in the csv files. "
                   "Parameter to allow compatibility for datasets of different years."}
     )

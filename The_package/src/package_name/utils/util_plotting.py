@@ -79,6 +79,8 @@ def bar_demographic_average_distance(df: pd.DataFrame, title='Average Distance p
         fig.savefig(os.path.join(storage_folder, name + '.svg'), format='svg')
     else:
         fig.savefig(os.path.join(storage_folder, name + '.png'), format='png', dpi=settings.png_dpi)
+    plt.close(fig)
+
 
 def plot_points(xs: np.ndarray, ys: np.ndarray, title='', subtitle='', storage_folder='.', name='plotted_points', svg=False):
     """
@@ -117,6 +119,7 @@ def plot_points(xs: np.ndarray, ys: np.ndarray, title='', subtitle='', storage_f
         fig.savefig(os.path.join(storage_folder, name + '.svg'), format='svg')
     else:
         fig.savefig(os.path.join(storage_folder, name + '.png'), format='png', dpi=settings.png_dpi)
+    plt.close(fig)
 
 
 def bar_dist_per_neighborhood(df: gpd.GeoDataFrame, title='', subtitle='', storage_folder='.', name='dist_per_neighborhood', svg=True):
@@ -163,7 +166,7 @@ def bar_dist_per_neighborhood(df: gpd.GeoDataFrame, title='', subtitle='', stora
         fig.savefig(os.path.join(storage_folder, name + '.svg'))
     else:
         fig.savefig(os.path.join(storage_folder, name + '.png'), format='png', dpi=settings.png_dpi)
-
+    plt.close(fig)
 
 def colored_network(DataFrame: gpd.GeoDataFrame, graph, data_col_name, title='', subtitle='', colorbar_label='', storage_folder='.', name='colored_network', svg=True, force_linear=False, show_graph=True):
     """
@@ -232,6 +235,7 @@ def colored_network(DataFrame: gpd.GeoDataFrame, graph, data_col_name, title='',
         fig.savefig(os.path.join(storage_folder, name + '.svg'))
     else:
         fig.savefig(os.path.join(storage_folder, name + '.png'), dpi=settings.png_dpi)
+    plt.close(fig)
 
 
 def DataFrames(DataFrames: list[pd.DataFrame], x_col:str, y_col:str, label_col:str,
@@ -243,9 +247,11 @@ def DataFrames(DataFrames: list[pd.DataFrame], x_col:str, y_col:str, label_col:s
         .groupby([label_col, x_col], as_index=False)[y_col]
         .mean()
     )
+    DataFrame(avg_df, x_col, y_col, label_col, xlabel, ylabel, title, subtitle, storage_folder,
+              name, svg, multiple_figures)
 
 
-def DataFrame(DataFrame: pd.DataFrame, x_col:str, y_col:str, label_col:str,
+def DataFrame(DataFrame, x_col:str, y_col:str, label_col:str,
                    xlabel:str, ylabel:str, title='', subtitle='', storage_folder='.',
                    name='DataFrame', svg=True, multiple_figures=False):
     # Shared code
@@ -276,6 +282,7 @@ def DataFrame(DataFrame: pd.DataFrame, x_col:str, y_col:str, label_col:str,
         fig.savefig(os.path.join(storage_folder, name + '.svg'))
     else:
         fig.savefig(os.path.join(storage_folder, name + '.png'), dpi=settings.png_dpi)
+    plt.close(fig)
 
     if multiple_figures:
         for label, grp in DataFrame.groupby(label_col):
@@ -300,7 +307,7 @@ def DataFrame(DataFrame: pd.DataFrame, x_col:str, y_col:str, label_col:str,
                 fig.savefig(os.path.join(storage_folder, str(label) + name + '.svg'))
             else:
                 fig.savefig(os.path.join(storage_folder, str(label) + name + '.png'), dpi=settings.png_dpi)
-
+            plt.close(fig)
 
 def plot_t_walk_map(gdf, storage_folder="debug", name="t_walk", show=False):
     """

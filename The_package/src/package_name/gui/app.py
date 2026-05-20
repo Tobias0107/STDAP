@@ -1,142 +1,1292 @@
+"""
+Professional PyQt6 dashboard for the pedestrianization simulator.
 
-from package_name.core.main_class import simulator
-from package_name.config.settings import get_settings
-from package_name.gui._widgets import SettingsWidget
+Features:
+- Multi-page workflow
+- Professional styling
+- Auto-generated settings editor from dataclass
+- Dynamic simulation pages
+- File browser dialogs
+- City loading from Simulator
+- Thread-ready architecture
+- Status bar feedback
+- Scrollable advanced settings
 
+Recommended file:
+    package_name/gui/main_window.py
+"""
+
+from dataclasses import fields
+import json
 import sys
-from PyQt6.QtCore import QSize, Qt
+
+from PyQt6.QtCore import Qt, QSize, QObject, pyqtSignal, QThread
+from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QApplication,
+    QCheckBox,
+    QComboBox,
+    QDoubleSpinBox,
+    QFileDialog,
+    QFormLayout,
+    QFrame,
+    QGroupBox,
     QHBoxLayout,
-    QMainWindow,
-    QPushButton,
-    QStackedLayout,
-    QVBoxLayout,
-    QWidget,
     QLabel,
     QLineEdit,
-    QComboBox
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QSpinBox,
+    QStackedWidget,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+    QListWidget,
+    QTableWidgetItem,
+    QTableWidget,
+    QListWidgetItem,
 )
 
-class MainWindow(QMainWindow):
-    def __init__(self):
-        # Set basic parameters
+from package_name.config.settings import get_settings
+from package_name.core.main_class import simulator
+from package_name.gui._widgets import CollapsibleBox
+
+class SimulationWorker(QObject):
+
+    log = pyqtSignal(str)
+    finished = pyqtSignal()
+
+    def __init__(self, simulator, mode, city, params):
         super().__init__()
-        self.setWindowTitle("Pedestrianization simulator GUI")
-        self.setMinimumSize(QSize(400, 300))
+        self.simulator = simulator
+        self.mode = mode
+        self.city = city
+        self.params = params
+
+    def run(self):
+
+        try:
+            self.log.emit("Starting simulation...")
+
+            self.log.emit(f"Selecting city: {self.city}")
+
+            self.simulator.choose_city(self.city)
+
+            if self.mode == 0:
+                self.simulator.Sim_trans_dist_single(
+                    **self.params
+                )
+            else:
+                self.simulator.Sim_trans_dist_multiple(
+                    **self.params
+                )
+
+            self.log.emit("Simulation finished.")
+
+        except Exception as e:
+            self.log.emit(f"ERROR: {str(e)}")
+
+        self.finished.emit()
+
+class StreamRedirector:
+    def __init__(self, signal):
+        self.signal = signal
+
+    def write(self, text):
+        if text.strip():
+            self.signal.emit(text)
+
+    def flush(self):
+        pass
+
+
+class MainWindow(QMainWindow):
+
+    def __init__(self):
+        # Create widget
+        super().__init__()
+        self.setWindowTitle("Pedestrianization Simulator")
+        self.setMinimumSize(QSize(1200, 800))
+
+        # Start parameters
+        self.simulator = None
+        self.simulation = 0
+        self.kwb_path = ""
+        self.geopackage_path = ""
+
+        # Widget containing main_layout
+        central = QWidget()
+        self.setCentralWidget(central)
+
+        # Main layout = header, subtitle, page_content, navigation, statusbar
+        self.main_layout = QVBoxLayout(central)
+        self.main_layout.setContentsMargins(30, 20, 30, 20)
+        self.main_layout.setSpacing(20)
+
+        # Title and subtitle
+        header = QLabel("Pedestrianization Simulator Dashboard")
+        header.setObjectName("headerTitle")
+        subtitle = QLabel("Simulation environment for public transport accessibility and pedestrianization analysis.")
+        subtitle.setObjectName("headerSubtitle")
+        self.main_layout.addWidget(header)
+        self.main_layout.addWidget(subtitle)
+
+        # Create pages layout
+        self.pages = QStackedWidget()
+        self.main_layout.addWidget(self.pages)
+        self.page_dataset = self.create_dataset_page()
+        self.page_simulation = self.create_simulation_page()
+        self.pages.addWidget(self.page_dataset)
+        self.pages.addWidget(self.page_simulation)
+
+        # Navigation buttons
+        nav = QHBoxLayout()
+        self.prev_btn = QPushButton("← Previous")
+        self.next_btn = QPushButton("Next →")
+        self.prev_btn.clicked.connect(self.prev_clicked)
+        self.next_btn.clicked.connect(self.next_clicked)
+        nav.addStretch()
+        nav.addWidget(self.prev_btn)
+        nav.addWidget(self.next_btn)
+        self.main_layout.addLayout(nav)
+
+        # Statusbar
+        self.statusBar().showMessage("Ready")
+        # Stylesheet
+        self.setStyleSheet(self.stylesheet())
+
+    def create_dataset_page(self):
+        """
+        ### Create a widget for the entire page.
+        Everything needed to initialize the simulator:\n
+        - Path to csv, geopackage
+        - Choose simulation
+        - Advanced settings
+        """
+
+        ###########################################################################
+        ##################### Create page #########################################
+        ###########################################################################
+
+        page = QWidget()
+
+        outer_layout = QVBoxLayout(page)
+        outer_layout.setContentsMargins(20, 20, 20, 20)
+        outer_layout.setSpacing(20)
+
+        ###########################################################################
+        ##################### Main dataset card ###################################
+        ###########################################################################
+
+        dataset_group = QGroupBox("Dataset loading")
+
+        dataset_layout = QFormLayout()
+        dataset_layout.setFieldGrowthPolicy(
+            QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow
+        )
+
+        dataset_layout.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
+        dataset_layout.setVerticalSpacing(18)
+        dataset_layout.setHorizontalSpacing(20)
+
+        ###########################################################################
+        ##################### Simulation mode #####################################
+        ###########################################################################
+
+        self.sim_box = QComboBox()
+
+        self.sim_box.addItems([
+            "Pedestrianize a single fraction",
+            "Pedestrianize a range of fractions"
+        ])
+
+        self.sim_box.currentIndexChanged.connect(
+            self.select_simulation
+        )
+
+        dataset_layout.addRow(
+            "Simulation mode:",
+            self.sim_box
+        )
+
+        ###########################################################################
+        ##################### CSV path ############################################
+        ###########################################################################
+
+        self.kwb_input = QLineEdit()
+
+        self.kwb_input.setPlaceholderText(
+            "Select CSV dataset"
+        )
+
+        kwb_browse = QPushButton("Browse")
+        kwb_browse.clicked.connect(self.select_csv)
+
+        kwb_row = QHBoxLayout()
+        kwb_row.setContentsMargins(0, 0, 0, 0)
+
+        kwb_row.addWidget(self.kwb_input)
+        kwb_row.addWidget(kwb_browse)
+
+        dataset_layout.addRow(
+            "CSV dataset:",
+            kwb_row
+        )
+
+        ###########################################################################
+        ##################### Geopackage path #####################################
+        ###########################################################################
+
+        self.geo_input = QLineEdit()
+
+        self.geo_input.setPlaceholderText(
+            "Select geopackage"
+        )
+
+        geo_browse = QPushButton("Browse")
+        geo_browse.clicked.connect(
+            self.select_geopackage
+        )
+
+        geo_row = QHBoxLayout()
+        geo_row.setContentsMargins(0, 0, 0, 0)
+
+        geo_row.addWidget(self.geo_input)
+        geo_row.addWidget(geo_browse)
+
+        dataset_layout.addRow(
+            "Geopackage:",
+            geo_row
+        )
+
+        ###########################################################################
+        ##################### Load simulator ######################################
+        ###########################################################################
+
+        load_btn = QPushButton("Load simulator")
+
+        load_btn.setMinimumHeight(42)
+
+        load_btn.clicked.connect(
+            self.load_simulator
+        )
+
+        dataset_layout.addRow(load_btn)
+
+        ###########################################################################
+        ##################### Advanced settings ###################################
+        ###########################################################################
+
+        self.settings = get_settings()
+
+        advanced = CollapsibleBox("Advanced settings")
+
+        advanced.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed
+        )
+
+        ###########################################################################
+        # Main advanced settings layout
+        ###########################################################################
+
+        advanced_layout = QHBoxLayout()
+        advanced_layout.setContentsMargins(10, 10, 10, 10)
+        advanced_layout.setSpacing(25)
+
+        ###########################################################################
+        ##################### Data import settings ################################
+        ###########################################################################
+
+        import_group = QGroupBox("Data import settings")
+
+        import_layout = QVBoxLayout()
+        import_layout.setSpacing(20)
+
+        ###########################################################################
+        # Column mappings
+        ###########################################################################
+
+        mapping_label = QLabel(
+            "Dataset column mappings"
+        )
+
+        mapping_label.setObjectName(
+            "settingsSectionTitle"
+        )
+
+        import_layout.addWidget(mapping_label)
+
+        self.column_table = QTableWidget()
+
+        self.column_table.setColumnCount(2)
+
+        self.column_table.setHorizontalHeaderLabels([
+            "Internal field",
+            "Dataset column"
+        ])
+
+        self.column_table.verticalHeader().setVisible(False)
+
+        self.column_table.setRowCount(
+            len(self.settings.dataset_column_names)
+        )
+
+        for row, (key, value) in enumerate(
+            self.settings.dataset_column_names.items()
+        ):
+
+            internal_item = QTableWidgetItem(key)
+
+            internal_item.setFlags(
+                internal_item.flags() &
+                ~Qt.ItemFlag.ItemIsEditable
+            )
+
+            self.column_table.setItem(
+                row,
+                0,
+                internal_item
+            )
+
+            self.column_table.setItem(
+                row,
+                1,
+                QTableWidgetItem(value)
+            )
+
+        self.column_table.horizontalHeader().setStretchLastSection(True)
+
+        self.column_table.setMinimumHeight(500)
+
+        import_layout.addWidget(self.column_table)
+
+        ###########################################################################
+        # CSV parsing options
+        ###########################################################################
+
+        csv_group = QGroupBox("CSV parsing")
+
+        csv_layout = QFormLayout()
+
+        csv_layout.setFieldGrowthPolicy(
+            QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow
+        )
+
+        ###########################################################################
+        # Delimiter
+        ###########################################################################
+
+        self.delim_box = QComboBox()
+
+        self.delim_box.addItems([
+            ",",
+            ";",
+            "\\t",
+            "|"
+        ])
+
+        self.delim_box.setCurrentText(
+            self.settings.dataset_delim
+        )
+
+        csv_layout.addRow(
+            "Delimiter:",
+            self.delim_box
+        )
+
+        ###########################################################################
+        # Decimal separator
+        ###########################################################################
+
+        self.decimal_box = QComboBox()
+
+        self.decimal_box.addItems([
+            ".",
+            ","
+        ])
+
+        self.decimal_box.setCurrentText(
+            self.settings.dataset_decimal_separator
+        )
+
+        csv_layout.addRow(
+            "Decimal separator:",
+            self.decimal_box
+        )
+
+        ###########################################################################
+        # Null strings
+        ###########################################################################
+
+        null_layout = QVBoxLayout()
+
+        self.null_list = QListWidget()
+        self.null_list.setEditTriggers(
+            QListWidget.EditTrigger.DoubleClicked |
+            QListWidget.EditTrigger.EditKeyPressed
+        )
+
+        for item in self.settings.dataset_nullstring:
+            self.null_list.addItem(item)
+
+        null_btn_row = QHBoxLayout()
+
+        add_null = QPushButton("Add")
+        remove_null = QPushButton("Remove")
+
+        add_null.clicked.connect(self.add_null_string)
+        remove_null.clicked.connect(self.remove_null_string)
+
+        null_btn_row.addWidget(add_null)
+        null_btn_row.addWidget(remove_null)
+
+        null_layout.addWidget(self.null_list)
+        null_layout.addLayout(null_btn_row)
+
+        csv_layout.addRow(
+            "NULL strings:",
+            null_layout
+        )
+
+        csv_group.setLayout(csv_layout)
+
+        import_layout.addWidget(csv_group)
+
+        import_group.setLayout(import_layout)
+
+        advanced_layout.addWidget(import_group)
+
+        ###########################################################################
+        ##################### Simulation self.settings #################################
+        ###########################################################################
+
+        sim_group = QGroupBox("Simulation self.settings")
+
+        sim_layout = QFormLayout()
+
+        sim_layout.setFieldGrowthPolicy(
+            QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow
+        )
+
+        ###########################################################################
+        # Neighborhood distribution
+        ###########################################################################
+
+        self.distribution_box = QComboBox()
+
+        self.distribution_box.addItems([
+            "Poisson distribution",
+            "Uniform random",
+            "Grid distribution"
+        ])
+
+        sim_layout.addRow(
+            "Neighborhood distribution:",
+            self.distribution_box
+        )
+
+        ###########################################################################
+        # Distance self.settings
+        ###########################################################################
+
+        self.transit_max_edge_dist = QSpinBox()
+        self.transit_max_edge_dist.setRange(0, 10000)
+        self.transit_max_edge_dist.setSuffix(" m")
+        self.transit_max_edge_dist.setValue(
+            self.settings.transit_max_edge_dist
+        )
+
+        sim_layout.addRow(
+            "Max transit-edge distance:",
+            self.transit_max_edge_dist
+        )
+
+        self.transit_max_pts_dist = QSpinBox()
+        self.transit_max_pts_dist.setRange(0, 10000)
+        self.transit_max_pts_dist.setSuffix(" m")
+        self.transit_max_pts_dist.setValue(
+            self.settings.transit_max_pts_dist
+        )
+
+        sim_layout.addRow(
+            "Max point-node distance:",
+            self.transit_max_pts_dist
+        )
+
+        self.transit_max_move_dist = QSpinBox()
+        self.transit_max_move_dist.setRange(0, 10000)
+        self.transit_max_move_dist.setSuffix(" m")
+        self.transit_max_move_dist.setValue(
+            self.settings.transit_max_move_dist
+        )
+
+        sim_layout.addRow(
+            "Max transit movement:",
+            self.transit_max_move_dist
+        )
+
+        self.max_dist_ped_transit = QSpinBox()
+        self.max_dist_ped_transit.setRange(0, 10000)
+        self.max_dist_ped_transit.setSuffix(" m")
+        self.max_dist_ped_transit.setValue(
+            self.settings.max_dist_ped_transit
+        )
+
+        sim_layout.addRow(
+            "Pedestrian-transit merge distance:",
+            self.max_dist_ped_transit
+        )
+
+        ###########################################################################
+        # Stop constraints
+        ###########################################################################
+
+        self.min_distance_stops = QSpinBox()
+        self.min_distance_stops.setRange(0, 10000)
+        self.min_distance_stops.setSuffix(" m")
+        self.min_distance_stops.setValue(
+            self.settings.min_distance_stops
+        )
+
+        sim_layout.addRow(
+            "Minimum stop distance:",
+            self.min_distance_stops
+        )
+
+        self.max_distance_stops = QSpinBox()
+        self.max_distance_stops.setRange(0, 10000)
+        self.max_distance_stops.setSuffix(" m")
+        self.max_distance_stops.setValue(
+            self.settings.max_distance_stops
+        )
+
+        sim_layout.addRow(
+            "Maximum stop distance:",
+            self.max_distance_stops
+        )
+
+        ###########################################################################
+        # Route constraints
+        ###########################################################################
+
+        self.min_stops_in_bus_route = QSpinBox()
+        self.min_stops_in_bus_route.setRange(1, 1000)
+        self.min_stops_in_bus_route.setValue(
+            self.settings.min_stops_in_bus_route
+        )
+
+        sim_layout.addRow(
+            "Minimum stops per route:",
+            self.min_stops_in_bus_route
+        )
+
+        self.max_stops_in_bus_route = QSpinBox()
+        self.max_stops_in_bus_route.setRange(1, 1000)
+        self.max_stops_in_bus_route.setValue(
+            self.settings.max_stops_in_bus_route
+        )
+
+        sim_layout.addRow(
+            "Maximum stops per route:",
+            self.max_stops_in_bus_route
+        )
+
+        ###########################################################################
+        # Scoring
+        ###########################################################################
+
+        self.amenity_to_pop_weight = QSpinBox()
+        self.amenity_to_pop_weight.setRange(0, 100000)
+        self.amenity_to_pop_weight.setValue(
+            self.settings.amenity_to_pop_weight
+        )
+
+        sim_layout.addRow(
+            "Amenity/population weight:",
+            self.amenity_to_pop_weight
+        )
+
+        sim_group.setLayout(sim_layout)
+
+        advanced_layout.addWidget(sim_group)
+
+        ###########################################################################
+        ##################### Visualization self.settings ###############################
+        ###########################################################################
+
+        viz_group = QGroupBox("Visualization self.settings")
+
+        viz_layout = QFormLayout()
+
+        viz_layout.setFieldGrowthPolicy(
+            QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow
+        )
+
+        ###########################################################################
+        # PNG DPI
+        ###########################################################################
+
+        self.png_dpi = QSpinBox()
+
+        self.png_dpi.setRange(72, 5000)
+        self.png_dpi.setSuffix(" dpi")
+
+        self.png_dpi.setValue(
+            self.settings.png_dpi
+        )
+
+        viz_layout.addRow(
+            "PNG DPI:",
+            self.png_dpi
+        )
+
+        ###########################################################################
+        # Colormap
+        ###########################################################################
+
+        self.colormap_box = QComboBox()
+
+        self.colormap_box.addItems([
+            "viridis",
+            "viridis_r",
+            "plasma",
+            "inferno",
+            "magma",
+            "cividis",
+            "RdBu",
+            "RdBu_r",
+            "coolwarm",
+            "Spectral"
+        ])
+
+        self.colormap_box.setCurrentText(
+            self.settings.colormap
+        )
+
+        viz_layout.addRow(
+            "Colormap:",
+            self.colormap_box
+        )
+
+        ###########################################################################
+        # Normalization
+        ###########################################################################
+
+        self.norm_box = QComboBox()
+
+        self.norm_box.addItems([
+            "Linear",
+            "LogNorm",
+            "SymLogNorm",
+            "PowerNorm"
+        ])
+
+        self.norm_box.setCurrentText(
+            "SymLogNorm"
+        )
+
+        viz_layout.addRow(
+            "Color normalization:",
+            self.norm_box
+        )
+
+        ###########################################################################
+        # Legend labels
+        ###########################################################################
+
+        self.legend_num_labels = QSpinBox()
+
+        self.legend_num_labels.setRange(2, 100)
+
+        self.legend_num_labels.setValue(
+            self.settings.legend_num_labels
+        )
+
+        viz_layout.addRow(
+            "Legend labels:",
+            self.legend_num_labels
+        )
+
+        viz_group.setLayout(viz_layout)
+
+        advanced_layout.addWidget(viz_group)
+
+        ###########################################################################
+        ##################### Finalize advanced ###################################
+        ###########################################################################
+
+        advanced.setContentLayout(
+            advanced_layout
+        )
+
+        dataset_layout.addRow(advanced)
+
+        ###########################################################################
+        ##################### Finalize page #######################################
+        ###########################################################################
+
+        dataset_group.setLayout(
+            dataset_layout
+        )
+
+        outer_layout.addWidget(
+            dataset_group
+        )
+
+        outer_layout.addStretch()
+
+        return page
+
+
+    def create_simulation_page(self):
+
+        # Basic page parameters
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        group = QGroupBox("Simulation Parameters")
+        form = QFormLayout()
+
+        # Every row
+        self.city_box = QComboBox()
+        form.addRow("City:", self.city_box)
+
+        self.fraction = QDoubleSpinBox()
+        self.fraction.setRange(0.0, 1.0)
+        self.fraction.setSingleStep(0.05)
+        self.fraction.setValue(0.2)
+        form.addRow("Fraction:", self.fraction)
 
         #######################################################################
-        ##################### Basic layout ####################################
+        # Multi simulation self.settings
         #######################################################################
 
-        # Paged structure
-        basic_layout = QVBoxLayout()
-        self.pages = QStackedLayout()
-        basic_layout.addLayout(self.pages)
+        self.f_start = QDoubleSpinBox()
+        self.f_start.setRange(0.0, 1.0)
+        self.f_start.setValue(0.0)
+        self.f_start.setVisible(False)
 
+        self.f_stop = QDoubleSpinBox()
+        self.f_stop.setRange(0.0, 1.0)
+        self.f_stop.setValue(0.5)
+        self.f_stop.setVisible(False)
 
-        # Previous, Next
-        prv_nxt = QHBoxLayout()
-        prev = QPushButton("Previous")
-        nxt = QPushButton("Next")
-        prev.clicked.connect(self.prev_clicked)
-        nxt.clicked.connect(self.nxt_clicked)
-        prv_nxt.addWidget(prev)
-        prv_nxt.addWidget(nxt)
-        basic_layout.addLayout(prv_nxt)
+        self.fn = QSpinBox()
+        self.fn.setRange(1, 1000)
+        self.fn.setValue(10)
+        self.fn.setVisible(False)
 
-
-        #######################################################################
-        ##################### Page 1 ##########################################
-        #######################################################################
-
-        # Start with a vertical layout as base.
-        page1 = QVBoxLayout()
-
-        # Title
-        title = QLabel("Load datasets")
-        font = title.font()
-        font.setPointSize(30)
-        title.setFont(font)
-        page1.addWidget(title)
-
-        # KWB path
-        page1.addWidget(QLabel("Kerncijfers wijken en buurten Dataset:"))
-        kwb_input = QLineEdit()
-        kwb_input.setPlaceholderText("Enter full or relative path")
-        kwb_input.textChanged.connect(self.kwb_path_set)
-        page1.addWidget(kwb_input)
-
-        # Geopackage path
-        page1.addWidget(QLabel("Kerncijfers wijken en buurten Dataset:"))
-        geopackage_input = QLineEdit()
-        geopackage_input.setPlaceholderText("Enter full or relative path")
-        geopackage_input.textChanged.connect(self.geopackage_path_set)
-        page1.addWidget(geopackage_input)
-
-        # Simulation method dropdown
-        sim_box = QComboBox()
-        sim_box.addItems(["Pedestrianize a single fraction", "Pedestrianize a range of fractions"])
-        sim_box.currentIndexChanged.connect(self.select_simulation)
-        page1.addWidget(QLabel("The simulation to perform:"))
-        page1.addWidget(sim_box)
-
-        # Finalize
-        widget_p1 = QWidget()
-        widget_p1.setLayout(page1)
-        self.setCentralWidget(widget_p1)
-        self.pages.addWidget(widget_p1)
+        form.addRow("Fraction start:", self.f_start)
+        form.addRow("Fraction stop:", self.f_stop)
+        form.addRow("Num simulations:", self.fn)
 
         #######################################################################
-        ##################### Page 2 ##########################################
+        # Checkboxes
         #######################################################################
 
+        self.use_population = QCheckBox()
+        self.use_population.setChecked(True)
 
+        self.use_amenity = QCheckBox()
+        self.use_amenity.setChecked(True)
+
+        self.minimal_move = QCheckBox()
+        self.minimal_move.setChecked(True)
+
+        self.blank_slate = QCheckBox()
+
+        self.print_progress = QCheckBox()
+        self.print_progress.setChecked(True)
+
+        self.svg = QCheckBox()
+
+        form.addRow("Use population:", self.use_population)
+        form.addRow("Use amenities:", self.use_amenity)
+        form.addRow("Minimal movement:", self.minimal_move)
+        form.addRow("Blank slate:", self.blank_slate)
+        form.addRow("Print progress:", self.print_progress)
+        form.addRow("Export SVG:", self.svg)
 
         #######################################################################
-        ##################### Page 3 ##########################################
+        # Saving directory
         #######################################################################
 
-        settings = get_settings()
-        config = SettingsWidget(settings)
-        self.pages.addWidget(config)
+        self.save_dir = QLineEdit("results_sim_transit_dist/")
+
+        form.addRow("Output directory:", self.save_dir)
 
         #######################################################################
-        ##################### Widget creation #################################
+        # Run button
         #######################################################################
 
-        widget = QWidget()
-        widget.setLayout(basic_layout)
-        self.setCentralWidget(widget)
+        self.run_btn = QPushButton("Run simulation")
+        self.run_btn.setObjectName("runButton")
+        self.run_btn.clicked.connect(self.run_simulation)
 
-        #######################################################################
-        ##################### Methods #########################################
-        #######################################################################
+        form.addRow(self.run_btn)
+
+        group.setLayout(form)
+
+        layout.addWidget(group)
+        layout.addStretch()
+
+        # Get real time output
+        self.log_output = QTextEdit()
+        self.log_output.setReadOnly(True)
+        self.log_output.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
+
+        # Create widget real time output
+        log_box = CollapsibleBox("Simulation output")
+        log_layout = QVBoxLayout()
+        log_layout.addWidget(self.log_output)
+        log_box.setContentLayout(log_layout)
+        layout.addWidget(log_box)
+
+        return page
 
     def prev_clicked(self):
-        "Decrement page index by 1 (safe)"
+
         index = self.pages.currentIndex()
+
         if index > 0:
             self.pages.setCurrentIndex(index - 1)
 
-    def nxt_clicked(self):
-        "Increment page index by 1 (safe)"
+    def next_clicked(self):
+
         index = self.pages.currentIndex()
-        if index < 2:
+
+        if index < self.pages.count() - 1:
             self.pages.setCurrentIndex(index + 1)
 
-    def kwb_path_set(self, path):
-        "Set self.kwb_path to given tekst"
-        self.kwb_path = path
 
-    def geopackage_path_set(self, path):
-        "Set self.geopackage_path to given tekst"
-        self.geopackage_path = path
+    def select_csv(self):
+
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select CSV dataset",
+            "",
+            "CSV files (*.csv)"
+        )
+
+        if path:
+            self.kwb_input.setText(path)
+
+    def select_geopackage(self):
+
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select geopackage",
+            "",
+            "Geopackage (*.gpkg)"
+        )
+
+        if path:
+            self.geo_input.setText(path)
+
+    def load_simulator(self):
+        try:
+            self.apply_settings()
+            self.kwb_path = self.kwb_input.text()
+            self.geopackage_path = self.geo_input.text()
+
+            self.statusBar().showMessage("Loading simulator...")
+
+            self.simulator = simulator(self.kwb_path, self.geopackage_path)
+
+            cities = self.simulator.get_cities()
+
+            self.city_box.clear()
+            self.city_box.addItems(cities)
+
+            self.statusBar().showMessage(
+                f"Simulator loaded successfully ({len(cities)} cities)"
+            )
+
+            QMessageBox.information(
+                self,
+                "Success",
+                "Simulator loaded successfully."
+            )
+
+        except Exception as e:
+
+            QMessageBox.critical(
+                self,
+                "Error",
+                str(e)
+            )
+
+    ############################################################################
+    ##################### Simulation ###########################################
+    ############################################################################
 
     def select_simulation(self, index):
+
         self.simulation = index
 
+        is_multi = index == 1
+
+        self.f_start.setVisible(is_multi)
+        self.f_stop.setVisible(is_multi)
+        self.fn.setVisible(is_multi)
+
+        self.fraction.setVisible(not is_multi)
+
+    def run_simulation(self):
+        """
+        Run the selected simulation in a separate thread.
+        Real-time stdout is redirected to the GUI log panel.
+        """
+
+        self.apply_settings()
+
+        selected_city = (self.city_box.currentText())
+
+        if not hasattr(self, "simulator"):
+
+            self.append_log(
+                "ERROR: Simulator not loaded."
+            )
+
+            return
+
+        common_kwargs = {
+
+            "use_population":
+                self.use_population.isChecked(),
+
+            "use_amenity":
+                self.use_amenity.isChecked(),
+
+            "minimal_move":
+                self.minimal_move.isChecked(),
+
+            "blank_slate":
+                self.blank_slate.isChecked(),
+
+            "print_progress":
+                True,
+
+            "saving_dir":
+                self.save_dir.text(),
+
+            "svg":
+                self.svg.isChecked(),
+        }
+
+        if self.simulation == 0:
+
+            common_kwargs["fraction"] = (
+                self.fraction.value()
+            )
+
+        else:
+
+            common_kwargs["f_start"] = (
+                self.f_start.value()
+            )
+
+            common_kwargs["f_end"] = (
+                self.f_stop.value()
+            )
+
+            common_kwargs["fn"] = (
+                self.fn.value()
+            )
+
+        self.log_output.clear()
+
+        self.run_btn.setEnabled(False)
+
+        self.stout_thread = QThread()
+
+        self.worker = SimulationWorker(
+            simulator=self.simulator,
+            mode=self.simulation,
+            city=selected_city,
+            params=common_kwargs
+        )
+
+        self.worker.moveToThread(
+            self.stout_thread
+        )
+
+        self._stdout_backup = sys.stdout
+
+        sys.stdout = StreamRedirector(
+            self.worker.log
+        )
+
+        self.stout_thread.started.connect(
+            self.worker.run
+        )
+
+        self.worker.log.connect(
+            self.append_log
+        )
+
+        self.worker.finished.connect(
+            self.stout_thread.quit
+        )
+
+        self.worker.finished.connect(
+            self.worker.deleteLater
+        )
+
+        self.stout_thread.finished.connect(
+            self.stout_thread.deleteLater
+        )
+
+        self.stout_thread.finished.connect(
+            self.restore_stdout
+        )
+
+        self.stout_thread.finished.connect(
+            lambda: self.run_btn.setEnabled(True)
+        )
+
+        self.stout_thread.start()
+
+    def stylesheet(self):
+
+        return """
+        QMainWindow {
+            background-color: #f4f6f8;
+        }
+
+        QLabel#headerTitle {
+            font-size: 30px;
+            font-weight: bold;
+            color: #1f2937;
+        }
+
+        QLabel#headerSubtitle {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 15px;
+        }
+
+        QLabel#settingsTitle {
+            font-size: 22px;
+            font-weight: bold;
+            padding-bottom: 10px;
+        }
+
+        QGroupBox {
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            margin-top: 15px;
+            padding: 20px;
+            font-size: 15px;
+            font-weight: bold;
+        }
+
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            left: 15px;
+            padding: 0 5px 0 5px;
+        }
+
+        QPushButton {
+            background-color: #2563eb;
+            color: white;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        QPushButton:hover {
+            background-color: #1d4ed8;
+        }
+
+        QPushButton#runButton {
+            background-color: #059669;
+        }
+
+        QPushButton#runButton:hover {
+            background-color: #047857;
+        }
+
+        QLineEdit,
+        QComboBox,
+        QSpinBox,
+        QDoubleSpinBox,
+        QTextEdit {
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 8px;
+            min-height: 30px;
+        }
+
+        QScrollArea {
+            border: none;
+        }
+        """
+
+    def add_null_string(self):
+        """
+        Add a new editable NULL-string item.
+        """
+
+        item = QListWidgetItem("")
+
+        item.setFlags(
+            item.flags() | Qt.ItemFlag.ItemIsEditable
+        )
+
+        self.null_list.addItem(item)
+
+        self.null_list.setCurrentItem(item)
+
+        self.null_list.editItem(item)
 
 
+    def remove_null_string(self):
+        """
+        Remove the currently selected NULL-string item.
+        """
+
+        current_row = self.null_list.currentRow()
+
+        if current_row >= 0:
+            self.null_list.takeItem(current_row)
+
+    def apply_settings(self):
+        """
+        Apply all GUI settings to the Settings object.
+        """
+
+        ###########################################################################
+        # Dataset column names
+        ###########################################################################
+
+        column_names = {}
+
+        for row in range(self.column_table.rowCount()):
+
+            internal_name = self.column_table.item(row, 0).text()
+
+            dataset_name = self.column_table.item(row, 1).text()
+
+            column_names[internal_name] = dataset_name
+
+        self.settings.dataset_column_names = column_names
+
+        ###########################################################################
+        # CSV parsing
+        ###########################################################################
+
+        self.settings.dataset_delim = (
+            self.delim_box.currentText()
+        )
+
+        self.settings.dataset_decimal_separator = (
+            self.decimal_box.currentText()
+        )
+
+        ###########################################################################
+        # NULL strings
+        ###########################################################################
+
+        null_strings = []
+
+        for i in range(self.null_list.count()):
+
+            item = self.null_list.item(i)
+
+            null_strings.append(item.text())
+
+        self.settings.dataset_nullstring = null_strings
+
+        ###########################################################################
+        # Simulation settings
+        ###########################################################################
+
+        self.settings.transit_max_edge_dist = (
+            self.transit_max_edge_dist.value()
+        )
+
+        self.settings.transit_max_pts_dist = (
+            self.transit_max_pts_dist.value()
+        )
+
+        self.settings.transit_max_move_dist = (
+            self.transit_max_move_dist.value()
+        )
+
+        self.settings.max_dist_ped_transit = (
+            self.max_dist_ped_transit.value()
+        )
+
+        self.settings.min_distance_stops = (
+            self.min_distance_stops.value()
+        )
+
+        self.settings.max_distance_stops = (
+            self.max_distance_stops.value()
+        )
+
+        self.settings.min_stops_in_bus_route = (
+            self.min_stops_in_bus_route.value()
+        )
+
+        self.settings.max_stops_in_bus_route = (
+            self.max_stops_in_bus_route.value()
+        )
+
+        self.settings.amenity_to_pop_weight = (
+            self.amenity_to_pop_weight.value()
+        )
+
+        ###########################################################################
+        # Visualization settings
+        ###########################################################################
+
+        self.settings.png_dpi = (
+            self.png_dpi.value()
+        )
+
+        self.settings.colormap = (
+            self.colormap_box.currentText()
+        )
+
+        self.settings.legend_num_labels = (
+            self.legend_num_labels.value()
+        )
+
+    def append_log(self, text):
+        """
+        Append text to the log console.
+        """
+
+        self.log_output.append(text)
+
+    def restore_stdout(self):
+        """
+        Restore original stdout.
+        """
+
+        sys.stdout = self._stdout_backup
 
 
+###############################################################################
+##################### Main ####################################################
+###############################################################################
+
+
+if __name__ == "__main__":
+
+    import sys
+
+    app = QApplication(sys.argv)
+
+    window = MainWindow()
+    window.show()
+
+    sys.exit(app.exec())

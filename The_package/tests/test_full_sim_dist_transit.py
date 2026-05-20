@@ -70,11 +70,11 @@ class TestMultipleFractions:
             # for i, city in enumerate(["Amsterdam", "Groningen", "Almere", "Rotterdam"]):
                 if show_progress: print(f"\nSimulating city {i}: {city}\n")
 
-                # Choose city
-                if show_progress: print(f"Obtaining network from API or Cached files")
-                sim.choose_city(str(city))
-
                 try:
+                    # Choose city
+                    if show_progress: print(f"Obtaining network from API or Cached files")
+                    sim.choose_city(str(city))
+
                     # Simulate for all fractions
                     df = sim.Sim_trans_dist_multiple(f_start, f_stop, fn,
                                                      use_population=pop,

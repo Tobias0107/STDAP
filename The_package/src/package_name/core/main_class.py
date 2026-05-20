@@ -50,9 +50,9 @@ class simulator:
         self.database.set_city(city)
 
     def Sim_trans_dist_single(self, fraction: float, *, use_population=True,
-                                       use_amenity=True, minimal_move=True, blank_slate=False,
-                                       print_progress=True, saving_dir="results_sim_transit_dist/",
-                                       svg=False):
+                              use_amenity=True, minimal_move=True, blank_slate=False,
+                              print_progress=True, saving_dir="results_sim_transit_dist/",
+                              svg=False):
         """
             ### Description:
                 <Here a short description of the simulation>

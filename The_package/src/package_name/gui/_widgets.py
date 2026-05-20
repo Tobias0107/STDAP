@@ -9,105 +9,130 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QPlainTextEdit,
     QLabel,
+    QToolButton,
+    QScrollArea,
+    QSizePolicy,
+    QVBoxLayout,
+    QFrame,
+    QTextEdit,
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import (
+    Qt,
+    QParallelAnimationGroup,
+    QPropertyAnimation,
+    QAbstractAnimation,
+)
 
-class SettingsWidget(QWidget):
 
-    def __init__(self, settings):
-        super().__init__()
+class CollapsibleBox(QWidget):
 
-        self.settings = settings
-        self.widgets = {}
+    def __init__(self, title="", parent=None):
+        super().__init__(parent)
 
-        layout = QFormLayout(self)
+        #######################################################################
+        # Toggle button
+        #######################################################################
 
-        for f in fields(settings):
+        self.toggle_button = QToolButton()
+        self.toggle_button.setStyleSheet("QToolButton { border: none; }")
+        self.toggle_button.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+        )
+        self.toggle_button.setArrowType(Qt.ArrowType.RightArrow)
+        self.toggle_button.setText(title)
+        self.toggle_button.setCheckable(True)
+        self.toggle_button.setChecked(False)
 
-            name = f.name
-            value = getattr(settings, name)
-            description = f.metadata.get("description", "")
+        #######################################################################
+        # Content area
+        #######################################################################
 
-            widget = self.create_widget(f.type, value)
+        self.content_area = QScrollArea()
+        self.content_area.setStyleSheet(
+            "QScrollArea { background-color: white; border: none; }"
+        )
 
-            if widget is None:
-                label = QLabel(f"Unsupported type: {type(value)}")
-                layout.addRow(name, label)
-                continue
+        self.content_area.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
 
-            widget.setToolTip(description)
+        self.content_area.setMaximumHeight(0)
+        self.content_area.setMinimumHeight(0)
 
-            self.widgets[name] = widget
+        #######################################################################
+        # Animation
+        #######################################################################
 
-            layout.addRow(name, widget)
+        self.toggle_animation = QParallelAnimationGroup(self)
 
-    def create_widget(self, typ, value):
+        self.content_animation = QPropertyAnimation(
+            self.content_area,
+            b"maximumHeight"
+        )
 
-        if isinstance(value, bool):
-            w = QCheckBox()
-            w.setChecked(value)
-            return w
+        self.content_animation.setDuration(200)
 
-        elif isinstance(value, int):
-            w = QSpinBox()
-            w.setRange(-1_000_000, 1_000_000)
-            w.setValue(value)
-            return w
+        self.toggle_animation.addAnimation(self.content_animation)
 
-        elif isinstance(value, float):
-            w = QDoubleSpinBox()
-            w.setRange(-1e9, 1e9)
-            w.setDecimals(6)
-            w.setValue(value)
-            return w
+        #######################################################################
+        # Layout
+        #######################################################################
 
-        elif isinstance(value, str):
-            w = QLineEdit(value)
-            return w
+        layout = QVBoxLayout(self)
+        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
 
-        elif isinstance(value, list):
-            w = QPlainTextEdit("\n".join(map(str, value)))
-            return w
+        layout.addWidget(self.toggle_button)
+        layout.addWidget(self.content_area)
 
-        elif isinstance(value, dict):
-            import json
-            w = QPlainTextEdit(json.dumps(value, indent=2))
-            return w
+        #######################################################################
+        # Signals
+        #######################################################################
 
-        else:
-            return None
+        self.toggle_button.clicked.connect(self.toggle)
 
-    def apply_settings(self):
-        for name, widget in self.widgets.items():
+    def toggle(self):
 
-            if isinstance(widget, QCheckBox):
-                value = widget.isChecked()
+        checked = self.toggle_button.isChecked()
 
-            elif isinstance(widget, QSpinBox):
-                value = widget.value()
+        self.toggle_button.setArrowType(
+            Qt.ArrowType.DownArrow
+            if checked
+            else Qt.ArrowType.RightArrow
+        )
 
-            elif isinstance(widget, QDoubleSpinBox):
-                value = widget.value()
+        direction = (
+            QAbstractAnimation.Direction.Forward
+            if checked
+            else QAbstractAnimation.Direction.Backward
+        )
 
-            elif isinstance(widget, QLineEdit):
-                value = widget.text()
+        self.toggle_animation.setDirection(direction)
+        self.toggle_animation.start()
 
-            elif isinstance(widget, QPlainTextEdit):
+    def setContentLayout(self, content_layout):
 
-                text = widget.toPlainText()
+        #######################################################################
+        # Destroy old layout
+        #######################################################################
 
-                current_value = getattr(self.settings, name)
+        old_widget = self.content_area.widget()
 
-                if isinstance(current_value, list):
-                    value = text.splitlines()
+        if old_widget is not None:
+            old_widget.deleteLater()
 
-                elif isinstance(current_value, dict):
-                    value = json.loads(text)
+        #######################################################################
+        # Create content widget
+        #######################################################################
 
-                else:
-                    value = text
+        content = QWidget()
+        content.setLayout(content_layout)
 
-            else:
-                return None
+        self.content_area.setWidget(content)
 
-            setattr(self.settings, name, value)
+        collapsed_height = 0
+        content_height = content.sizeHint().height()
+
+        self.content_animation.setStartValue(collapsed_height)
+        self.content_animation.setEndValue(content_height)
