@@ -389,8 +389,8 @@ class Database:
         ### Side-effects:
             - Remembers city (needed for later methods)
         """
-
         self.city = city.replace("'", "''")
+        self.create_pts = True
 
     def load_network(self, network: Network):
         """
@@ -618,6 +618,9 @@ class Database:
             - Uses algorithm from configuration to obtain point locations
             - Links point locations to nearest node in pedestrian network
         """
+        # Only create points if needed
+        if self.create_pts == False:
+            return
         # Obtain bounding box as dataframe:
         df = self.conn.sql("""
             SELECT id, ST_XMin(geometry) as lower_x, ST_XMax(geometry) as upper_x,
@@ -671,6 +674,9 @@ class Database:
         self.num_buurten = self.conn.sql("SELECT count(id) FROM Neighborhoods").fetchone()[0] # type: ignore
         # Total lost
         self.lost = self.num_buurten - self.conn.sql("SELECT count(neighborhood_id) FROM (SELECT DISTINCT neighborhood_id FROM Neighborhood_pts)").fetchone()[0] # type: ignore
+
+        # Ensure create_pts is not to be re-run
+        self.create_pts = False
 
     def obtain_generated_pts(self):
         """

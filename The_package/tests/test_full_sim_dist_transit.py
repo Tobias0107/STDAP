@@ -84,14 +84,14 @@ class TestMultipleFractions:
 
 
         # 6 different simulation options
-        for ((pop, amenity, ped_method),
-             (minimal, blank, mv_method)) in product(ped_opt, bus_mv_opt):
+        for i, ((pop, amenity, ped_method),
+               (minimal, blank, mv_method)) in enumerate(product(ped_opt, bus_mv_opt), start=1):
             if show_progress: print(f"\n\nSimulating using the {ped_method} method and the {mv_method} method.\n\n")
 
             # For every city
             # for i, city in enumerate(sim.get_cities(order_by="pop", limit=10)):
-            for i, city in enumerate(large_cities):
-                if show_progress: print(f"\nSimulating city {i}: {city}\n")
+            for j, city in enumerate(large_cities, start=1):
+                if show_progress: print(f"\n({i * j} / 120) Simulating city: {city} using {ped_method} pedestrianization and {mv_method} transit movement.\n")
 
                 try:
                     # Choose city
@@ -107,7 +107,7 @@ class TestMultipleFractions:
                                                      print_progress=show_progress,
                                                      saving_dir=os.path.join(folder, ped_method, mv_method, "fraction_range", str(city)),
                                                      svg=svg_format)
-                    # Store in file to spare RAM
+                    # Store in file to save RAM
                     storage_folder = os.path.join("network_cache", ped_method, mv_method)
                     if not os.path.isdir(storage_folder):
                         os.makedirs(storage_folder)
