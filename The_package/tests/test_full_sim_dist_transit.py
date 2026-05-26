@@ -26,7 +26,7 @@ settings.dataset_column_names['high_education'] = "a_opl_bvm"
 settings.dataset_column_names['medium_education'] = "a_opl_hvm"
 settings.dataset_column_names['low_education'] = "a_opl_hw"
 settings.dataset_nullstring = ['       .', '.', '']
-settings.neighborhood_distribution = lambda a, b, c, d : Poisson_distribution(a, b, c, d, radius=100)
+settings.neighborhood_distribution = lambda a, b, c, d : Poisson_distribution(a, b, c, d, radius=30)
 
 
 class TestMultipleFractions:
@@ -39,6 +39,29 @@ class TestMultipleFractions:
         f_start = 0
         f_stop = 0.5
         fn = 10
+
+        large_cities = [
+            "Amsterdam",
+            "Rotterdam",
+            "den Haag",
+            "Utrecht",
+            "Eindhoven",
+            "Groningen",
+            "Tilburg",
+            "Almere",
+            "Breda",
+            "Nijmegen",
+            "Apeldoorn",
+            "Haarlem",
+            "Arnhem",
+            "Haarlemmermeer",
+            "Amersfoort",
+            "Enschede",
+            "Zaanstad",
+            "'s-Hertogenbosch",
+            "Zwolle",
+            "Leeuwarden"
+        ]
 
         # Fractions of interest (max two per city)
         min_1 = 0.1
@@ -66,8 +89,8 @@ class TestMultipleFractions:
             if show_progress: print(f"\n\nSimulating using the {ped_method} method and the {mv_method} method.\n\n")
 
             # For every city
-            for i, city in enumerate(sim.get_cities()):
-            # for i, city in enumerate(["Amsterdam", "Groningen", "Almere", "Rotterdam"]):
+            # for i, city in enumerate(sim.get_cities(order_by="pop", limit=10)):
+            for i, city in enumerate(large_cities):
                 if show_progress: print(f"\nSimulating city {i}: {city}\n")
 
                 try:

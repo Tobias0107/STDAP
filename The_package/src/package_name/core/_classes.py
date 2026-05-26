@@ -357,7 +357,7 @@ class Database:
         except Exception:
             pass
 
-    def get_cities(self):
+    def get_cities(self, order_by="gm_naam", limit="342"):
         """
         ### Expected:
             - None
@@ -368,10 +368,11 @@ class Database:
         ### Side-effects:
             - None
         """
-        query = """
+        query = f"""
             SELECT DISTINCT gm_naam
             FROM CBS
-            ORDER BY gm_naam
+            ORDER BY {order_by}
+            LIMIT {limit}
             """
         res = self.conn.sql(query).fetchnumpy()
         return res["gm_naam"].tolist()
@@ -388,7 +389,8 @@ class Database:
         ### Side-effects:
             - Remembers city (needed for later methods)
         """
-        self.city = city
+
+        self.city = city.replace("'", "''")
 
     def load_network(self, network: Network):
         """
@@ -985,7 +987,7 @@ class Database:
         """
         # Create origin-destination pairs, start routes with origin as stop 0
         origin_dest = f"""
-            SELECT s1.id, s1.loc, s2.id, s2.loc, s1.id, s1.loc, [s1.id], 0
+            SELECT s1.id, s1.loc, s2.id, s2.loc, s1.id, s1.loc, [s1.id], 0, 0
             FROM ({candidate_source_dest}) s1
             JOIN ({candidate_source_dest}) s2
             ON s1.id < s2.id
@@ -993,22 +995,22 @@ class Database:
         # Recursively determine possible bus routes, creates table
         self.conn.sql(f"""
             CREATE OR REPLACE TABLE Bus_routes AS
-            WITH RECURSIVE routes(origin, origin_loc, dest, dest_loc, stop, stop_loc, path_list, stop_number)
+            WITH RECURSIVE routes(origin, origin_loc, dest, dest_loc, stop, stop_loc, path_list, num_stops, route_dist)
                 USING KEY (origin, dest)
             AS (
                 -- Base table
                 ({origin_dest})
                     UNION
                 -- Recursive step: adding next stop to the table
-                SELECT r.origin, r.origin_loc, r.dest, r.dest_loc, n.id, n.loc, list_append(r.path_list, n.id), r.stop_number + 1
+                SELECT r.origin, r.origin_loc, r.dest, r.dest_loc, n.id, n.loc, list_append(r.path_list, n.id), r.num_stops + 1, r.route_dist + ST_Distance(r.stop_loc, n.loc)
                 FROM routes r
                 -- Select from candidate bus stops:
-                JOIN (SELECT DISTINCT id, loc FROM Graph_nodes_accessible) n
+                JOIN (SELECT DISTINCT id, loc FROM Graph_nodes_accessible WHERE street_count >= 2) n
                 -- Condition: Maximum distance between stops
                 ON ST_DWithin(r.stop_loc, n.loc, {settings.max_distance_stops})
                 WHERE
                     -- Condition: Maximum bus_route length
-                    r.stop_number < {settings.max_stops_in_bus_route}
+                    r.num_stops < {settings.max_stops_in_bus_route}
                     -- Condition: Minimum distance between stops
                     AND ST_Distance(r.stop_loc, n.loc) > {settings.min_distance_stops}
                     -- Condition: Closer to destination
@@ -1022,7 +1024,7 @@ class Database:
             )
             FROM routes
             -- Bus stops having too little stops are removed.
-            WHERE stop_number > {settings.min_stops_in_bus_route}
+            WHERE num_stops > {settings.min_stops_in_bus_route}
         """)
 
         # Score the routes
@@ -1030,17 +1032,19 @@ class Database:
             CREATE OR REPLACE TEMP TABLE Selected_routes AS
             -- Pre-calculate score/node
             WITH Node_scores AS (
-                SELECT g.id as node_id, (n.population + {settings.amenity_to_pop_weight} * n.amenities) AS score
+                SELECT g.id as node_id,
+                       ((n.population + {settings.amenity_to_pop_weight} *
+                         n.amenities) / n.area) AS score
                 FROM (SELECT DISTINCT id, loc, neighborhood_id FROM Graph_nodes_accessible) g
                 JOIN Neighborhoods n
                 ON g.neighborhood_id = n.id
             )
-            SELECT DISTINCT ON (route_score) r.*, sum(s.score) AS route_score
+            SELECT DISTINCT ON (route_score, r.route_dist) r.*, sum(s.score) AS route_score
             FROM Bus_routes r,
             unnest(r.path_list) AS t(node_id)
             JOIN Node_scores s
             ON t.node_id = s.node_id
-            GROUP BY ALL
+            GROUP BY r.*
         """)
         # Obtain Bus-stop Count
         bus_count = int(self.conn.sql("""
@@ -1058,7 +1062,7 @@ class Database:
             INSERT INTO Stations(node_id, loc, bus)
             -- Flatten path_list, and give nodes maximum route_scores
             WITH Scored_nodes AS (
-                SELECT flat.node_id, max(r.route_score) AS score
+                SELECT flat.node_id, max(r.route_score / r.route_dist) AS score
                 FROM Selected_routes r,
                 unnest(r.path_list) AS flat(node_id)
                 GROUP BY flat.node_id

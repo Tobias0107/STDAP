@@ -37,9 +37,9 @@ class simulator:
         self.store_in_file = store_in_file
         self.storage_dir = storage_dir
 
-    def get_cities(self):
+    def get_cities(self, order_by="gm_naam", limit="342"):
         """ Returns a list of cities available in the given datasets """
-        return self.database.get_cities()
+        return self.database.get_cities(order_by, limit)
 
     def choose_city(self, city: str):
         """
