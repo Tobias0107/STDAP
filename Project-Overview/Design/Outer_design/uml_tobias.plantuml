@@ -53,8 +53,6 @@ class Network {
     DataFrame get_features()
     transform_edges(ebunch)
     add_edges_to_ped_network(ebunch)
-    build_r5_network(osm_pbf_path, gtfs_files)
-    get_r5_network()
 }
 
 class Settings {

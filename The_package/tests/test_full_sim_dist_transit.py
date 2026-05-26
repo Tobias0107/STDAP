@@ -6,7 +6,7 @@
 
 from package_name.core.main_class import simulator
 from package_name.config.settings import get_settings
-from package_name.config.functions import Poisson_distribution
+from package_name.config.functions import PoissonDiskDistribution
 import package_name.utils.util_plotting as plot
 import os
 import pandas as pd
@@ -26,7 +26,7 @@ settings.dataset_column_names['high_education'] = "a_opl_bvm"
 settings.dataset_column_names['medium_education'] = "a_opl_hvm"
 settings.dataset_column_names['low_education'] = "a_opl_hw"
 settings.dataset_nullstring = ['       .', '.', '']
-settings.neighborhood_distribution = lambda a, b, c, d : Poisson_distribution(a, b, c, d, radius=30)
+settings.neighborhood_distribution = lambda a, b, c, d : PoissonDiskDistribution(a, b, c, d, radius=30)
 
 
 class TestMultipleFractions:

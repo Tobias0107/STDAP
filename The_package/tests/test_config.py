@@ -19,7 +19,7 @@ class TestSettings:
         print(settings.describe())
 
     def test_to_df(self):
-        print(settings.to_df())
+        settings.to_df().to_csv("config.csv")
 
 
 class TestConfigFuncs:

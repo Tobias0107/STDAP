@@ -82,12 +82,12 @@ class Settings:
     ###########################################################################
 
     neighborhood_distribution: Callable[[float, float, float, float], np.typing.NDArray[np.float64]] = field(
-        default=functions.Poisson_distribution,
+        default=functions.PoissonDiskDistribution,
         metadata= {"description": "Given the upper and lower bounds of the "\
                     "bounding box of the neighborhood. Generate a list of "\
                     "coordinates of points representing the neighborhood. "\
                     "Default uses scipy PoissonDisk distribution. "\
-                    "Import default with 'import package_name.config.functions.Poisson_distribution' "\
+                    "Import default with 'import package_name.config.functions.PoissonDiskDistribution' "\
                     "This function should return a numpy NDarray consisting of a list of points. "\
                     "Points are lists of 2 elements in the form [x, y]"}
     )
