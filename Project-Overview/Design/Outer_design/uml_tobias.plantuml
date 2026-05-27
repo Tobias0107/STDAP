@@ -79,7 +79,9 @@ class Settings {
     DataFrame to_df()
 }
 
-protocol Functions
+protocol Functions {
+    PoissonDiskDistribution()
+}
 protocol get_settings
 protocol reset_settings
 
@@ -93,7 +95,7 @@ Main_class::data --> Database : is
 Main_class::network --> Network : is
 Main_class ..|> get_settings : uses
 Database ..|> get_settings : uses
-Settings ..|> Functions : uses
+Settings::neighborhood_distribution --> Functions::PoissonDiskDistribution : default
 Settings <-- get_settings : creates
 Settings <-- reset_settings : modifies
 

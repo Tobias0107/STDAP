@@ -1000,7 +1000,7 @@ class Database:
         """
         # Recursively determine possible bus routes, creates table
         self.conn.sql(f"""
-            CREATE OR REPLACE TABLE Bus_routes AS
+            CREATE OR REPLACE TEMP TABLE Bus_routes AS
             WITH RECURSIVE routes(origin, origin_loc, dest, dest_loc, stop, stop_loc, path_list, num_stops, route_dist)
                 USING KEY (origin, dest)
             AS (
@@ -1118,7 +1118,7 @@ class Database:
         })
         self.conn.register("dists_table", dists_table)
         self.conn.sql("""
-            CREATE OR REPLACE TABLE Distances AS
+            CREATE OR REPLACE TEMP TABLE Distances AS
             SELECT *
             FROM dists_table
         """)
@@ -1137,7 +1137,7 @@ class Database:
         """
         # Group by neighborhood, join point with dist, avg dist
         self.conn.sql("""
-            CREATE OR REPLACE TABLE Dist_per_neighborhood AS
+            CREATE OR REPLACE TEMP TABLE Dist_per_neighborhood AS
             SELECT pt.neighborhood_id, avg(d.dist) AS avg_dist
             FROM Neighborhood_pts pt
             LEFT JOIN Distances d
