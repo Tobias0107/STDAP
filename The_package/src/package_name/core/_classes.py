@@ -915,6 +915,8 @@ class Database:
             FROM (SELECT * FROM Features WHERE bus='yes' OR train='yes' OR railway='stop') f
             JOIN Graph_nodes n
             ON ST_DWithin(f.loc, n.loc, {settings.transit_max_edge_dist})
+            JOIN Graph_nodes_ped p
+            ON ST_DWithin(f.loc, p.geometry, {settings.transit_max_edge_dist})
             QUALIFY row_number() OVER (PARTITION BY f.element, f.id ORDER BY ST_Distance(f.loc, n.loc) ASC) = 1
         """)
 

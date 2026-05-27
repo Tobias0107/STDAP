@@ -125,7 +125,7 @@ class Settings:
                   "Only used for the blank slate transit stop relocation."}
     )
     max_stops_in_bus_route: int = field(
-        default=20,
+        default=30,
         metadata={"description": "The maximum number of stops in a single bus route."
                   "Only used for the blank slate transit stop relocation."}
     )
