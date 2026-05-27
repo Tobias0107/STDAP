@@ -83,18 +83,18 @@ class Settings:
 
     neighborhood_distribution: Callable[[float, float, float, float], np.typing.NDArray[np.float64]] = field(
         default=functions.PoissonDiskDistribution,
-        metadata= {"description": "Given the upper and lower bounds of the "\
-                    "bounding box of the neighborhood. Generate a list of "\
-                    "coordinates of points representing the neighborhood. "\
-                    "Default uses scipy PoissonDisk distribution. "\
-                    "Import default with 'import package_name.config.functions.PoissonDiskDistribution' "\
+        metadata= {"description": "Given the bounding box in the form of lower_x, upper_x, lower_y, upper_y. "\
+                    "Generates points within the bounding box to represent the population. "
+                    "Rejection of points is not part of this function. "
                     "This function should return a numpy NDarray consisting of a list of points. "\
-                    "Points are lists of 2 elements in the form [x, y]"}
+                    "Points are lists of 2 elements in the form [x, y] "
+                    "The default functions uses the scipy PoissonDisk distribution. "\
+                    "It can be imported using: 'import package_name.config.functions.PoissonDiskDistribution'"}\
     )
-    transit_max_edge_dist: int = field(
+    max_dist_transit_network: int = field(
         default=30,
-        metadata={"description": "This field determined the maximum distance in meters "\
-                  "between a transit node, and the nearest edge."}
+        metadata={"description": "This field determines the maximum distance in meters "\
+                  "between a transit stop, and car-accessible and pedestrian networks."}
     )
     transit_max_pts_dist: int = field(
         default=30,
@@ -104,39 +104,32 @@ class Settings:
     transit_max_move_dist: int = field(
         default=200,
         metadata={"description": "The maximum distance in meters between the previous "\
-                  "transit location, and the new moved transit location."}
-    )
-    max_dist_ped_transit: int = field(
-        default=30,
-        metadata={"description": "The maximum distance in meters between a transit station "\
-                  "and the pedestrian network. This is needed as nodes between the networks do "\
-                  "not nessisarily overlap. This constant acts as a buffer allowing the networks "\
-                  "to be merged, and obtain the nodes in the driving network accessible by the "\
-                  "pedestrian network."}
+                  "transit location, and the new moved transit location. This function "\
+                  "is used only by the minimal move method."}
     )
     min_distance_stops: int = field(
         default=300,
-        metadata={"description": "The minimal distance in meter between transit stops."\
+        metadata={"description": "The minimal distance in meter between transit stops. "\
                   "Only used for the blank slate transit stop relocation."}
     )
     max_distance_stops: int = field(
         default=800,
-        metadata={"description": "The maximum distance in meter between transit stops."\
+        metadata={"description": "The maximum distance in meter between transit stops. "\
                   "Only used for the blank slate transit stop relocation."}
     )
     max_stops_in_bus_route: int = field(
         default=30,
-        metadata={"description": "The maximum number of stops in a single bus route."
+        metadata={"description": "The maximum number of stops in a single bus route. "
                   "Only used for the blank slate transit stop relocation."}
     )
     min_stops_in_bus_route: int = field(
         default=9,
-        metadata={"description": "The maximum number of stops in a single bus route."
+        metadata={"description": "The maximum number of stops in a single bus route. "
                   "Only used for the blank slate transit stop relocation."}
     )
     amenity_to_pop_weight: int = field(
         default=20,
-        metadata={"description": "Used for the scoring formula used by the blank-slate method"
+        metadata={"description": "Used for the scoring formula used by the blank-slate method "
                   "Score = pop_size + amenity_to_pop_weight * num_amenities"}
     )
 
@@ -157,7 +150,7 @@ class Settings:
         default=lambda vmin, vmax: mcolor.SymLogNorm(linthresh=1, vmin=vmin, vmax=vmax),
         metadata={"description": "The normalization used to assign colors to values in the colored network. "
                   "It should be a valid matplotlib normalization. The default function is "
-                  "matplotlib.mcolor.SymLogNorm() with a linthresh of 1. The function should"
+                  "matplotlib.mcolor.SymLogNorm() with a linthresh of 1. The function should "
                   "take a vmin and vmax argument."}
     )
     legend_num_labels: int = field(

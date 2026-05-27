@@ -52,7 +52,7 @@ from PyQt6.QtWidgets import (
 )
 
 from package_name.config.settings import get_settings
-from package_name.config.functions import Poisson_distribution
+from package_name.config.functions import PoissonDiskDistribution
 from package_name.core.main_class import simulator
 from package_name.gui._widgets import CollapsibleBox
 
@@ -485,30 +485,16 @@ class MainWindow(QMainWindow):
         self.poisson_radius.setRange(0, 10000)
         self.poisson_radius.setSuffix(" m")
         self.poisson_radius.setValue(30)
-        sim_layout.addRow("Poisson radius:",self.poisson_radius)
+        sim_layout.addRow("PoissonDisk radius:",self.poisson_radius)
 
         self.poisson_ncandidates = QSpinBox()
         self.poisson_ncandidates.setRange(0, 10000)
         self.poisson_ncandidates.setValue(7)
-        sim_layout.addRow("Poisson ncandidates:",self.poisson_ncandidates)
+        sim_layout.addRow("PoissonDisk ncandidates:",self.poisson_ncandidates)
 
         ###########################################################################
         # Distance self.settings
         ###########################################################################
-
-        self.transit_max_edge_dist = QSpinBox()
-        self.transit_max_edge_dist.setRange(0, 10000)
-        self.transit_max_edge_dist.setSuffix(" m")
-        self.transit_max_edge_dist.setValue(
-            self.settings.transit_max_edge_dist
-        )
-
-        sim_layout.addRow(
-            "Max transit-edge distance:",
-            self.transit_max_edge_dist
-        )
-
-
 
         self.transit_max_pts_dist = QSpinBox()
         self.transit_max_pts_dist.setRange(0, 10000)
@@ -518,7 +504,7 @@ class MainWindow(QMainWindow):
         )
 
         sim_layout.addRow(
-            "Max point-node distance:",
+            "Point to network integration distance:",
             self.transit_max_pts_dist
         )
 
@@ -530,20 +516,20 @@ class MainWindow(QMainWindow):
         )
 
         sim_layout.addRow(
-            "Max transit movement:",
+            "Maximum distance to move transit (minimal move):",
             self.transit_max_move_dist
         )
 
-        self.max_dist_ped_transit = QSpinBox()
-        self.max_dist_ped_transit.setRange(0, 10000)
-        self.max_dist_ped_transit.setSuffix(" m")
-        self.max_dist_ped_transit.setValue(
-            self.settings.max_dist_ped_transit
+        self.max_dist_transit_network = QSpinBox()
+        self.max_dist_transit_network.setRange(0, 10000)
+        self.max_dist_transit_network.setSuffix(" m")
+        self.max_dist_transit_network.setValue(
+            self.settings.max_dist_transit_network
         )
 
         sim_layout.addRow(
-            "Pedestrian-transit merge distance:",
-            self.max_dist_ped_transit
+            "Transit to network integration distance:",
+            self.max_dist_transit_network
         )
 
         ###########################################################################
@@ -558,7 +544,7 @@ class MainWindow(QMainWindow):
         )
 
         sim_layout.addRow(
-            "Minimum stop distance:",
+            "Minimum bus-stop distance:",
             self.min_distance_stops
         )
 
@@ -570,7 +556,7 @@ class MainWindow(QMainWindow):
         )
 
         sim_layout.addRow(
-            "Maximum stop distance:",
+            "Maximum bus-stop distance:",
             self.max_distance_stops
         )
 
@@ -585,7 +571,7 @@ class MainWindow(QMainWindow):
         )
 
         sim_layout.addRow(
-            "Minimum stops per route:",
+            "Minimum number of bus-stops per route:",
             self.min_stops_in_bus_route
         )
 
@@ -596,7 +582,7 @@ class MainWindow(QMainWindow):
         )
 
         sim_layout.addRow(
-            "Maximum stops per route:",
+            "Maximum number of bus-stops per route:",
             self.max_stops_in_bus_route
         )
 
@@ -636,7 +622,6 @@ class MainWindow(QMainWindow):
         ###########################################################################
 
         self.png_dpi = QSpinBox()
-
         self.png_dpi.setRange(72, 5000)
         self.png_dpi.setSuffix(" dpi")
 
@@ -1232,13 +1217,9 @@ class MainWindow(QMainWindow):
         ###########################################################################
 
         self.settings.neighborhood_distribution = (
-            lambda a, b, c, d : Poisson_distribution(a, b, c, d,
+            lambda a, b, c, d : PoissonDiskDistribution(a, b, c, d,
                                                      radius=self.poisson_radius.value(),
                                                      ncanidates=self.poisson_ncandidates.value())
-        )
-
-        self.settings.transit_max_edge_dist = (
-            self.transit_max_edge_dist.value()
         )
 
         self.settings.transit_max_pts_dist = (
@@ -1249,8 +1230,8 @@ class MainWindow(QMainWindow):
             self.transit_max_move_dist.value()
         )
 
-        self.settings.max_dist_ped_transit = (
-            self.max_dist_ped_transit.value()
+        self.settings.max_dist_transit_network = (
+            self.max_dist_transit_network.value()
         )
 
         self.settings.min_distance_stops = (

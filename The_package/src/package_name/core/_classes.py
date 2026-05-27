@@ -486,7 +486,7 @@ class Database:
             SELECT n.*, p.id AS pedestrian_node_id
             FROM Graph_nodes n
             JOIN Graph_nodes_ped p
-            ON ST_DWithin(p.geometry, n.loc, {settings.max_dist_ped_transit})
+            ON ST_DWithin(p.geometry, n.loc, {settings.max_dist_transit_network})
         """)
 
         # Add edges between drive network en pedestrian network
@@ -914,9 +914,9 @@ class Database:
             SELECT f.id AS feature_id, n.id AS node_id, f.loc, f.bus, f.train, f.railway
             FROM (SELECT * FROM Features WHERE bus='yes' OR train='yes' OR railway='stop') f
             JOIN Graph_nodes n
-            ON ST_DWithin(f.loc, n.loc, {settings.transit_max_edge_dist})
+            ON ST_DWithin(f.loc, n.loc, {settings.max_dist_transit_network})
             JOIN Graph_nodes_ped p
-            ON ST_DWithin(f.loc, p.geometry, {settings.transit_max_edge_dist})
+            ON ST_DWithin(f.loc, p.geometry, {settings.max_dist_transit_network})
             QUALIFY row_number() OVER (PARTITION BY f.element, f.id ORDER BY ST_Distance(f.loc, n.loc) ASC) = 1
         """)
 
@@ -930,7 +930,7 @@ class Database:
             As transit stops are not nessisarily connected to the street network, transit
             is mapped to the nearest edge in the network. Here the maximum distance between
             a transit and an edge before the transit is ignored can be set in settings.py
-            (transit_max_edge_dist). Default = 30. (In meters)
+            (max_dist_transit_network). Default = 30. (In meters)
         ### Expected:
             - busses linked (link_busses called)
         ### Parameters:
