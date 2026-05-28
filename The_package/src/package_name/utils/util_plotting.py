@@ -105,6 +105,7 @@ def plot_points(xs: np.ndarray, ys: np.ndarray, title='', subtitle='', storage_f
     # Create figure
     fig = plt.figure()
     plt.scatter(xs, ys, s=0.5, edgecolors='none')
+    plt.axis('off')
 
     # Labels
     plt.suptitle(title)

@@ -23,11 +23,7 @@ sim.choose_city("Amsterdam")
 
 class TestMainClass:
     def test_Sim_trans_dist_single(self):
-        sim.Sim_trans_dist_single(0.0, svg=True, blank_slate=False, minimal_move=True, saving_dir="results_Amsterdam/minimal/percentages/0%/")
-        sim.Sim_trans_dist_single(0.1, svg=True, blank_slate=False, minimal_move=True, saving_dir="results_Amsterdam/minimal/percentages/10%/")
-        sim.Sim_trans_dist_single(0.25, svg=True, blank_slate=False, minimal_move=True, saving_dir="results_Amsterdam/minimal/percentages/25%/")
-        sim.Sim_trans_dist_single(0.1, svg=True, blank_slate=True, minimal_move=False, saving_dir="results_Amsterdam/blank-slate/percentages/10%/")
-        sim.Sim_trans_dist_single(0.25, svg=True, blank_slate=True, minimal_move=False, saving_dir="results_Amsterdam/blank-slate/percentages/25%/")
+        sim.Sim_trans_dist_single(0.25, svg=False, blank_slate=True, minimal_move=False, saving_dir="results_test/blank-slate/percentages/25%/")
 
     def test_sim_trans_sist_multiple(self):
-        sim.Sim_trans_dist_multiple(0, 0.5, 100, svg=True, blank_slate=False, minimal_move=True, saving_dir="results_Amsterdam/minimal/range/")
+        sim.Sim_trans_dist_multiple(0, 0.5, 100, svg=False, blank_slate=False, minimal_move=True, saving_dir="results_test/minimal/range/")

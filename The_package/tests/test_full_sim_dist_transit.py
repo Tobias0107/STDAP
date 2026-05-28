@@ -41,26 +41,26 @@ class TestMultipleFractions:
         fn = 10
 
         large_cities = [
-            # "Amsterdam",
-            # "Rotterdam",
+            "Amsterdam",
+            "Rotterdam",
             "'s-Gravenhage",
             "Utrecht",
             "Eindhoven",
-            # "Groningen",
-            # "Tilburg",
-            # "Almere",
-            # "Breda",
-            # "Nijmegen",
-            # "Apeldoorn",
+            "Groningen",
+            "Tilburg",
+            "Almere",
+            "Breda",
+            "Nijmegen",
+            "Apeldoorn",
             "Haarlem",
-            # "Arnhem",
-            # "Haarlemmermeer",
-            # "Amersfoort",
-            # "Enschede",
-            # "Zaanstad",
-            # "'s-Hertogenbosch",
-            # "Zwolle",
-            # "Leeuwarden"
+            "Arnhem",
+            "Haarlemmermeer",
+            "Amersfoort",
+            "Enschede",
+            "Zaanstad",
+            "'s-Hertogenbosch",
+            "Zwolle",
+            "Leeuwarden"
         ]
 
         # Fractions of interest (max two per city)
@@ -105,13 +105,13 @@ class TestMultipleFractions:
                                                      minimal_move=minimal,
                                                      blank_slate=blank,
                                                      print_progress=show_progress,
-                                                     saving_dir=os.path.join(folder, ped_method, mv_method, "fraction_range", str(city)),
+                                                     saving_dir=os.path.join(folder, city, ped_method, mv_method, "fraction_range"),
                                                      svg=svg_format)
                     # Store in file to save RAM
-                    storage_folder = os.path.join("network_cache", ped_method, mv_method)
+                    storage_folder = os.path.join("network_cache", city, ped_method, mv_method)
                     if not os.path.isdir(storage_folder):
                         os.makedirs(storage_folder)
-                    df.to_parquet(os.path.join(storage_folder, str(city) + ".parquet"))
+                    df.to_parquet(os.path.join(storage_folder, city + ".parquet"))
                     del df
 
                     # Generate results for interesting fractions
@@ -121,7 +121,7 @@ class TestMultipleFractions:
                                             minimal_move=minimal,
                                             blank_slate=blank,
                                             print_progress=show_progress,
-                                            saving_dir=os.path.join(folder, ped_method, mv_method, "individual_fractions", f"{min_1}%", str(city)),
+                                            saving_dir=os.path.join(folder, city, ped_method, mv_method, "individual_fractions", f"{min_1 * 100}%"),
                                             svg=svg_format)
                     sim.Sim_trans_dist_single(min_2,
                                             use_population=pop,
@@ -129,7 +129,7 @@ class TestMultipleFractions:
                                             minimal_move=minimal,
                                             blank_slate=blank,
                                             print_progress=show_progress,
-                                            saving_dir=os.path.join(folder, ped_method, mv_method, "individual_fractions", f"{min_2}%", str(city)),
+                                            saving_dir=os.path.join(folder, city, ped_method, mv_method, "individual_fractions", f"{min_2 * 100}%"),
                                             svg=svg_format)
                     sim.Sim_trans_dist_single(blank_1,
                                             use_population=pop,
@@ -137,7 +137,7 @@ class TestMultipleFractions:
                                             minimal_move=minimal,
                                             blank_slate=blank,
                                             print_progress=show_progress,
-                                            saving_dir=os.path.join(folder, ped_method, mv_method, "individual_fractions", f"{blank_1}%", str(city)),
+                                            saving_dir=os.path.join(folder, city, ped_method, mv_method, "individual_fractions", f"{blank_1 * 100}%"),
                                             svg=svg_format)
                     # Against memory problems
                     del sim
@@ -153,7 +153,7 @@ class TestMultipleFractions:
             multiple_lst: list[pd.DataFrame] = []
             for city in sim.get_cities():
                 try:
-                    df = pd.read_parquet(os.path.join("network_cache", ped_method, mv_method, str(city) + ".parquet"))
+                    df = pd.read_parquet(os.path.join("network_cache", city, ped_method, mv_method + ".parquet"))
                     multiple_lst.append(df)
                 except Exception:
                     pass
@@ -165,9 +165,9 @@ class TestMultipleFractions:
                     label_col='dem_grp',
                     xlabel='Fraction pedestrianized',
                     ylabel='Average distance',
-                    title=f'Distance nearest transit: Netherlands',
+                    title=f'Distance nearest transit: Average',
                     subtitle='',
-                    storage_folder=os.path.join(folder, ped_method, mv_method),
-                    name=f'Distance nearest transit: Netherlands',
+                    storage_folder=os.path.join(folder, city, ped_method, mv_method),
+                    name=f'Distance nearest transit: Average',
                     svg=svg_format,
                     multiple_figures=True)
