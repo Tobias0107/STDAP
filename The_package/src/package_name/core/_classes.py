@@ -77,12 +77,12 @@ class Network:
         # Calculate the distances from ped_transit_nodes to all other nodes in ped_network
         return nx.multi_source_dijkstra_path_length(G, ped_transit_nodes, weight="length")
 
-    def get_features(self, amenity=True, public_transport=True):
+    def get_features(self):
         """ Import features via api or file, and then return features as GeoDataFrame """
         if os.path.isfile(f"{self.path}.parquet"):
             self.features = gpd.read_parquet(f"{self.path}.parquet")
         else:
-            self.features = get_features(self.city, amenity, public_transport)
+            self.features = get_features(self.city)
             if self.store_in_file:
                 self.features.to_parquet(f"{self.path}.parquet")
         return self.features
@@ -497,16 +497,13 @@ class Database:
         ebunch = df.itertuples(index=False, name=None)
         self.network.add_edges_to_ped_network(ebunch)
 
-    def obtain_features(self, amenity=True, public_transport=True):
+    def obtain_features(self):
         """
         ### Expected:
             - City set (set_city())
             - Network loaded (load_network())
         ### Parameters:
-            - aminity:\n
-                If True: obtains all amenities
-            - public_transport:\n
-                If True: obtains all public transport
+            - None
         ### Returns:
             - None
         ### Side-effects:
@@ -516,11 +513,9 @@ class Database:
         """
         # Delete any existing features
         self.conn.sql("DELETE FROM Features")
-        if not (amenity and public_transport):
-            return
 
         # Get features GeoDataFrame from OSMnx
-        features_gdf = self.network.get_features(amenity, public_transport)
+        features_gdf = self.network.get_features()
 
         # Make features importable in duckdb
         features_arrow = features_gdf.to_arrow()
@@ -1041,7 +1036,7 @@ class Database:
             -- Pre-calculate score/node
             WITH Node_scores AS (
                 SELECT g.id as node_id,
-                       ((n.population + {settings.amenity_to_pop_weight} *
+                       ((n.population + (SELECT sum(population) / if(sum(amenities) != 0, sum(amenities), 1) FROM Neighborhoods) *
                          n.amenities) / n.area) AS score
                 FROM (SELECT DISTINCT id, loc, neighborhood_id FROM Graph_nodes_accessible) g
                 JOIN Neighborhoods n

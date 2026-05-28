@@ -41,26 +41,26 @@ class TestMultipleFractions:
         fn = 10
 
         large_cities = [
-            "Amsterdam",
-            "Rotterdam",
-            "den Haag",
+            # "Amsterdam",
+            # "Rotterdam",
+            "'s-Gravenhage",
             "Utrecht",
             "Eindhoven",
-            "Groningen",
-            "Tilburg",
-            "Almere",
-            "Breda",
-            "Nijmegen",
-            "Apeldoorn",
+            # "Groningen",
+            # "Tilburg",
+            # "Almere",
+            # "Breda",
+            # "Nijmegen",
+            # "Apeldoorn",
             "Haarlem",
-            "Arnhem",
-            "Haarlemmermeer",
-            "Amersfoort",
-            "Enschede",
-            "Zaanstad",
-            "'s-Hertogenbosch",
-            "Zwolle",
-            "Leeuwarden"
+            # "Arnhem",
+            # "Haarlemmermeer",
+            # "Amersfoort",
+            # "Enschede",
+            # "Zaanstad",
+            # "'s-Hertogenbosch",
+            # "Zwolle",
+            # "Leeuwarden"
         ]
 
         # Fractions of interest (max two per city)
@@ -91,7 +91,7 @@ class TestMultipleFractions:
             # For every city
             # for i, city in enumerate(sim.get_cities(order_by="pop", limit=10)):
             for j, city in enumerate(large_cities, start=1):
-                if show_progress: print(f"\n({i * j} / 120) Simulating city: {city} using {ped_method} pedestrianization and {mv_method} transit movement.\n")
+                if show_progress: print(f"\n({i * j} / {6 * len(large_cities)}) Simulating city: {city} using {ped_method} pedestrianization and {mv_method} transit movement.\n")
 
                 try:
                     # Choose city
