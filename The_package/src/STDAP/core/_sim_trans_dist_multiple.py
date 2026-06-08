@@ -7,8 +7,8 @@
 import networkx as nx
 import geopandas as gpd
 import pandas as pd
-from package_name.core._classes import Database, Network
-import package_name.utils.util_plotting as plot
+from STDAP.core._classes import Database, Network
+import STDAP.utils.util_plotting as plot
 import numpy as np
 
 

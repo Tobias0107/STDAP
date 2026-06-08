@@ -4,10 +4,10 @@
     Accessibility for different Demographic Groups
 """
 
-from package_name.core.main_class import simulator
-from package_name.config.settings import get_settings
-from package_name.config.functions import PoissonDiskDistribution
-import package_name.utils.util_plotting as plot
+from STDAP.core.main_class import simulator
+from STDAP.config.settings import get_settings
+from STDAP.config.functions import PoissonDiskDistribution
+import STDAP.utils.util_plotting as plot
 import os
 import pandas as pd
 import matplotlib

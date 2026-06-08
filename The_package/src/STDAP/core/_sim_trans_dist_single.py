@@ -4,8 +4,8 @@
 """
 
 # Imports
-from package_name.core._classes import Database, Network
-import package_name.utils.util_plotting as plot
+from STDAP.core._classes import Database, Network
+import STDAP.utils.util_plotting as plot
 
 def run_simulation(network:Network, database:Database, f: float, use_population: bool,
                    use_amenity: bool, simple_move: bool, bus_network_redesign: bool,

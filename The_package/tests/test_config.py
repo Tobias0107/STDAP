@@ -2,8 +2,8 @@
     This file contains the pytests for config
 """
 
-from package_name.config.settings import get_settings
-import package_name.config.functions as functions
+from STDAP.config.settings import get_settings
+import STDAP.config.functions as functions
 import matplotlib.pyplot as plt
 
 settings = get_settings()

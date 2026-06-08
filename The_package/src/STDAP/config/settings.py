@@ -13,7 +13,7 @@ from typing import Callable
 import numpy as np
 import pandas as pd
 import matplotlib.colors as mcolor
-import package_name.config.functions as functions
+import STDAP.config.functions as functions
 
 @dataclass
 class Settings:

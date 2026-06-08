@@ -2,7 +2,7 @@
     This file contains the pytests for the utils
 """
 
-from package_name.utils.util_OSMnx import get_graph, get_features
+from STDAP.utils.util_OSMnx import get_graph, get_features
 
 class TestUtilsOSMnx:
     def test_get_graph(self):

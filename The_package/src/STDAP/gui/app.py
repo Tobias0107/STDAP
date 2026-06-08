@@ -36,8 +36,8 @@ from PyQt6.QtWidgets import (
     QListView
 )
 
-from package_name.core.main_class import simulator
-from package_name.gui._widgets import CollapsibleBox
+from STDAP.core.main_class import simulator
+from STDAP.gui._widgets import CollapsibleBox
 
 
 class CollapsibleBox(QWidget):

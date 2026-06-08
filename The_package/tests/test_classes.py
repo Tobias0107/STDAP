@@ -7,8 +7,8 @@
     Run from The_package as root: pytest --durations=0 -s --verbose
 """
 
-from package_name.core._classes import Database, Network
-from package_name.config.settings import get_settings
+from STDAP.core._classes import Database, Network
+from STDAP.config.settings import get_settings
 
 # Dataset
 csv = "tests/TestDatasets/kwb2024.csv"

@@ -14,7 +14,7 @@ import matplotlib as mpl
 import os
 import numpy as np
 
-from package_name.config.settings import get_settings
+from STDAP.config.settings import get_settings
 settings = get_settings()
 
 

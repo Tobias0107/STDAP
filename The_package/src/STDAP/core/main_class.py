@@ -3,12 +3,12 @@
 """
 
 # Import classes and exceptions
-from package_name.core._classes import Database, Network
-from package_name.exceptions import Initializing_error
+from STDAP.core._classes import Database, Network
+from STDAP.exceptions import Initializing_error
 
 # Import Simulations from core
-import package_name.core._sim_trans_dist_single as Sim_trans_dist
-import package_name.core._sim_trans_dist_multiple as Sim_trans_dist_fn
+import STDAP.core._sim_trans_dist_single as Sim_trans_dist
+import STDAP.core._sim_trans_dist_multiple as Sim_trans_dist_fn
 
 
 class Simulator:

@@ -18,10 +18,10 @@ import random
 
 
 # Importing helper functions from utils
-from package_name.utils.util_OSMnx import get_graph, get_features
+from STDAP.utils.util_OSMnx import get_graph, get_features
 
 # Importing configuration settings
-from package_name.config.settings import get_settings
+from STDAP.config.settings import get_settings
 settings = get_settings()
 
 class Network:

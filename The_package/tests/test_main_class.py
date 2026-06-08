@@ -2,8 +2,8 @@
     Tests the main class for exceptions and runtime.
 """
 
-from package_name.core.main_class import simulator
-from package_name.config.settings import get_settings
+from STDAP.core.main_class import simulator
+from STDAP.config.settings import get_settings
 
 csv = "tests/TestDatasets/kwb2024.csv"
 geopackage = "tests/TestDatasets/geopackage.gpkg"
