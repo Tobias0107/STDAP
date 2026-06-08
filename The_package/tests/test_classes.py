@@ -1,10 +1,9 @@
 """
-    This file contains the tests for the classes within core/_classes.py
+    This file contains the tests for the Database class methods.
+    It only checks the runtime and exceptions of every method.
+    Tests are run using the 2024 dataset (download manually).
 
     The tests are written using pytest.
-
-    In practice tests are written for every method where possible.
-
     Run from The_package as root: pytest --durations=0 -s --verbose
 """
 
@@ -63,24 +62,4 @@ class TestDatabase:
 
     def test_get_demographic_average_increase(self):
         database.get_demographic_average_distance()
-
-    # def test_show_database(self):
-    #     database.to_csv(limit=1000000)
-
-
-# class TestNetwork:
-#     def test_load_neighborhoods(self):
-#         pass
-
-#     def test_r5_network_initially_none(self):
-#         net = Network("Amsterdam")
-#         assert net.r5_network is None
-
-#     def test_build_r5_network(self):
-#         net = Network("Amsterdam")
-
-#         net.build_r5_network(osm_pbf_path="tests/TestDatasets/test.osm.pbf",  gtfs_files=["tests/TestDatasets/test_gtfs.zip"])
-
-#         assert net.r5_network is not None
-
 

@@ -30,7 +30,6 @@ class TestConfigFuncs:
         """
             This test uses below variables to plot a Poisson distribution.
         """
-        return
         show_radiusses = False
         lower_x = 0
         higher_x = 10000
@@ -38,7 +37,7 @@ class TestConfigFuncs:
         higher_y = 10000
         radius = 250
         ncanidates = 30
-        pts = functions.Poisson_distribution(lower_x, higher_x, lower_y, higher_y, radius=radius, ncanidates=ncanidates)
+        pts = functions.PoissonDiskDistribution(lower_x, higher_x, lower_y, higher_y, radius=radius, ncanidates=ncanidates)
 
         # Written by Chat-gpt:
 

@@ -1,3 +1,7 @@
+"""
+    This file contains the show_dashboard function to show the Simulation dashboard.
+"""
+
 from package_name.gui.app import MainWindow
 from PyQt6.QtWidgets import QApplication
 import sys
