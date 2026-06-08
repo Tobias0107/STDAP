@@ -6,7 +6,7 @@ from STDAP.gui.app import MainWindow
 from PyQt6.QtWidgets import QApplication
 import sys
 
-def show_dashboard(self):
+def show_dashboard():
     """
         This function creates and shows a dashboard for running simulations on
         the effect of pedestrianization on transit distance.
