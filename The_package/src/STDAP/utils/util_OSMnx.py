@@ -100,7 +100,7 @@ def get_graph(city:str, project=True, network_type="drive"):
     - network_type: \n
         The type of roads to import: default = 'drive' (car-accessible).
     """
-    ox.settings.use_cache = True
+    ox.settings.use_cache = False
     query = {'city': city, 'country': 'Netherlands'}
     place_gdf = ox.geocode_to_gdf(query)
     polygon = place_gdf.geometry.iloc[0]
