@@ -172,7 +172,7 @@ def bar_dist_per_neighborhood(df, title='', subtitle='', storage_folder='.', nam
 def colored_network(DataFrame: gpd.GeoDataFrame, graph, data_col_name, title='', subtitle='', colorbar_label='', storage_folder='.', name='colored_network', svg=True, force_linear=False, show_graph=True):
     """
     ### Parameters:
-        - df: \n
+        - DataFrame: \n
             The dataframe (neighborhoods, data_col_name) used to color the network.
             May be a GeoDataFrame or DataFrame
         - graph: \n
@@ -242,6 +242,37 @@ def colored_network(DataFrame: gpd.GeoDataFrame, graph, data_col_name, title='',
 def DataFrames(DataFrames: list[pd.DataFrame], x_col:str, y_col:str, label_col:str,
                    xlabel:str, ylabel:str, title='', subtitle='', storage_folder='.',
                    name='DataFrame', svg=True, multiple_figures=False):
+    """
+        ### Parameters:
+        - DataFrames: \n
+            The list of DataFrames to plot. The average over the list is taken.
+        - x_col: \n
+            The column name for the x-axis data
+        - y_col: \n
+            The column name for the y-axis data
+        - label_col: \n
+            The column name with the labels, data is grouped using this label column.
+        - x_label: \n
+            The label to give to the x-axis
+        - y_label: \n
+            The label to give to the y-axis
+        - title: \n
+            The title of the figure
+        - subtitle: \n
+            The subtitle of the figure
+        - storage_folder: \n
+            The folder to store the file.\
+        - name: \n
+            The name of the file to store
+        - svg: \n
+            If True: Uses svg format. Otherwise png format.
+        - multiple_figures: \n
+            Generate figures for every individual label also.
+    ### Returns
+        - None
+    ### Side-effects
+        - Stores a svg/png of the plot on given location.
+    """
     combined = pd.concat(DataFrames, ignore_index=True)
     avg_df = (
         combined
@@ -255,6 +286,38 @@ def DataFrames(DataFrames: list[pd.DataFrame], x_col:str, y_col:str, label_col:s
 def DataFrame(DataFrame, x_col:str, y_col:str, label_col:str,
                    xlabel:str, ylabel:str, title='', subtitle='', storage_folder='.',
                    name='DataFrame', svg=True, multiple_figures=False):
+    """
+    ### Parameters:
+        - DataFrame: \n
+            The DataFrame to plot
+        - x_col: \n
+            The column name for the x-axis data
+        - y_col: \n
+            The column name for the y-axis data
+        - label_col: \n
+            The column name with the labels, data is grouped using this label column.
+        - x_label: \n
+            The label to give to the x-axis
+        - y_label: \n
+            The label to give to the y-axis
+        - title: \n
+            The title of the figure
+        - subtitle: \n
+            The subtitle of the figure
+        - storage_folder: \n
+            The folder to store the file.\
+        - name: \n
+            The name of the file to store
+        - svg: \n
+            If True: Uses svg format. Otherwise png format.
+        - multiple_figures: \n
+            Generate figures for every individual label also.
+    ### Returns
+        - None
+    ### Side-effects
+        - Stores a svg/png of the plot on given location.
+    """
+    
     # Shared code
     if not os.path.isdir(storage_folder):
             os.makedirs(storage_folder)

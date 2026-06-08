@@ -1,7 +1,8 @@
 """
-    This file contains all functions related to the simulation of the transit
-    distance after removing <fraction> edges.
+    This file contains the run_simulation function containing the function logic used by the main class
+    to simulate pedestrianization on a range of fractions.
 """
+
 # Imports
 import networkx as nx
 import geopandas as gpd
@@ -9,6 +10,7 @@ import pandas as pd
 from package_name.core._classes import Database, Network
 import package_name.utils.util_plotting as plot
 import numpy as np
+
 
 def run_simulation(network:Network, database:Database, f_start, f_end, fn, use_population: bool,
                    use_amenity: bool, simple_move: bool, blank_slate: bool,

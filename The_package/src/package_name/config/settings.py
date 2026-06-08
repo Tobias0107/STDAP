@@ -1,24 +1,34 @@
 """
     This file contains the full configuration options for the python package.
 
-    Settings can be obtained and modified with the following method:
+    Settings can be modified with the following method:
         settings = from package_name.config.settings import get_settings
         settings = get_settings()
-        settings.example = 5
+        settings.parameter = value
 """
 
-
+# Imports
 from dataclasses import dataclass, field, fields
 from typing import Callable
 import numpy as np
 import pandas as pd
 import matplotlib.colors as mcolor
-
-
 import package_name.config.functions as functions
 
 @dataclass
 class Settings:
+    """
+        This class contains the entire configuration used by the Simulator class.
+
+        Settings can modified with the following method:
+        settings = from package_name.config.settings import get_settings
+        settings = get_settings()
+        settings.parameter = value
+
+        Available parameters and descriptions can be obtained with the
+        '.describe()' and '.to_df()' methods. 
+    """
+
     ###########################################################################
     ##################### Data importation settings ###########################
     ###########################################################################
@@ -180,6 +190,9 @@ class Settings:
         return lines
 
     def to_df(self) -> pd.DataFrame:
+        """
+            Returns DataFrame representation of settings, including per field descriptions.
+        """
         rows = []
         for f in fields(self):
             rows.append({
@@ -195,9 +208,16 @@ _settings = Settings()
 
 
 def get_settings() -> Settings:
+    "Obtain the Settings class used to store and modify Simulation configuration"
     return _settings
 
 
 def reset_settings():
+    """
+        Reset the Settings class, and thus the simulation configuration to it's default values.
+    
+        'get_settings()' should be rerun, as a new instance of the Settings class is generated.
+    """
+
     global _settings
     _settings = Settings()

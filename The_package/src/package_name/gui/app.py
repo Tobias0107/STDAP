@@ -217,7 +217,9 @@ class StreamRedirector:
 
 
 class MainWindow(QMainWindow):
-
+    """
+        The main window used as an advanced dashboard for the Simulator class.
+    """
     def __init__(self):
         # Create widget
         super().__init__()

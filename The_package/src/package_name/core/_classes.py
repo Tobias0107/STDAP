@@ -1,6 +1,6 @@
 """
-    This file contains all class definitions except for the main class.
-    For details, please see the UML or manual.
+    This file contains the Network and Database class (see documentation)
+    Originally not intended for use outside pre-build functions.
 """
 
 # Importing packages
@@ -9,7 +9,6 @@ import osmnx as ox
 import networkx as nx
 import os
 import pandas as pd
-import numpy as np
 import geopandas as gpd
 import pyarrow as pa
 import heapq
@@ -25,16 +24,24 @@ from package_name.utils.util_OSMnx import get_graph, get_features
 from package_name.config.settings import get_settings
 settings = get_settings()
 
-# Importing exceptions
-from package_name.exceptions import Initializing_error
-
-
 class Network:
-    def __init__(self, city: str, store_in_file=False, store_dir='network_cache/') -> None:
+    def __init__(self, city: str, store_in_file=False, store_dir='network_cache/'):
         """
-            Get OSMnx network of city.
-            If store_in_file=True, writes a copy of the original imported network to a store_path.
-            If such a copy exists, initialization will use this copy instead of the OSMnx api.
+        ### Description
+            Get OSMnx car and pedestrian networks of city.
+        ### Expected:
+            - None
+        ### Parameters:
+            - city:\n
+                The city the network belongs to (Dutch name)
+            - store_in_file:\n
+                If true, stores API network import in file for later use.
+            - store_dir: \n
+                The directory to store and look for downloaded networks.
+        ### Returns:
+            - A instance of the Network class
+        ### Side-effects:
+            Might create a directory and download downloads to the directory.
         """
         self.store_in_file = store_in_file
         self.path = f"{store_dir}{city}"
@@ -59,18 +66,45 @@ class Network:
                 ox.io.save_graphml(self.graph_pedestrian, f"{self.path}_ped.graphml")
 
     def get_drive_network_df(self):
-        "Returns tuple (nodes, edges) of driving network converted to pandas dataframe"
+        """
+        ### Expected:
+            - None
+        ### Parameters:
+            - None
+        ### Returns:
+            - tuple (nodes, edges) of driving network converted to pandas dataframe
+        ### Side-effects:
+            - None
+        """
         return ox.convert.graph_to_gdfs(self.graph_drive)
 
     def get_pedestrian_nodes_df(self):
-        "Returns tuple (nodes, edges) of pedestrian network converted to pandas dataframe"
+        """
+        ### Expected:
+            - None
+        ### Parameters:
+            - None
+        ### Returns:
+            - tuple (nodes, edges) of pedestrian network converted to pandas dataframe
+        ### Side-effects:
+            - None
+        """
         return ox.convert.graph_to_gdfs(self.graph_pedestrian, fill_edge_geometry=True)
 
     def get_distances_to_transit(self, ped_transit_nodes):
         """
+        ### Description
             Calculates the distance from the sources, that is the transit stops
             (nodes on pedestrian network), to all other nodes in the network.
-            Returns: A dictionary {node_id:dist_to_closest_transit}
+        ### Expected:
+            - None
+        ### Parameters:
+            - ped_transit_nodes:\n
+                The transit stop locations (Collection)
+        ### Returns:
+            - A dictionary {node_id:dist_to_closest_transit}
+        ### Side-effects:
+            - None
         """
         # Get undirected graph (as pedestrian network is undirected)
         G = self.graph_pedestrian.to_undirected(reciprocal=False)
@@ -78,7 +112,19 @@ class Network:
         return nx.multi_source_dijkstra_path_length(G, ped_transit_nodes, weight="length")
 
     def get_features(self):
-        """ Import features via api or file, and then return features as GeoDataFrame """
+        """
+        ### Description:
+            The POI's also called features are imported via API or file.
+            The contents of these features is available in the documentation.
+        ### Expected:
+            - None
+        ### Parameters:
+            - None
+        ### Returns:
+            - A Pandas GeoDataFrame containing the obtained Features
+        ### Side-effects:
+            - None
+        """
         if os.path.isfile(f"{self.path}.parquet"):
             self.features = gpd.read_parquet(f"{self.path}.parquet")
         else:
@@ -89,9 +135,15 @@ class Network:
 
     def transform_edges(self, ebunch):
         """
-            Given a list of tuples (u, v, key).
-            Removes the edges from the driving network
-            and adds them to the pedestrian network
+        ### Expected:
+            - None
+        ### Parameters:
+            - ebunch:\n
+                A list of tuples (u, v, key) specifying the edges to pedestrianize. 
+        ### Returns:
+            - None
+        ### Side-effects:
+            - Pedestrianizes the car-accessible and pedestrian network with ebunch.
         """
         # For every edge, obtain the data
         edges_to_add = []
@@ -105,31 +157,19 @@ class Network:
 
     def add_edges_to_ped_network(self, ebunch):
         """
-            Given a list of tuples (u, v).
-            and adds them to the pedestrian network
+        ### Expected:
+            - None
+        ### Parameters:
+            - ebunch:\n
+                A list of tuples (u, v), u and v are node id's.
+        ### Returns:
+            - None
+        ### Side-effects:
+            Adds the edges (ebunch) between the two nodes to the pedestrian network.
+
         """
         self.graph_pedestrian.add_edges_from(ebunch)
 
-    def build_r5_network(self, osm_pbf_path: str, gtfs_files: list):
-        """
-        Builds an r5py TransportNetwork using OSM + GTFS.
-        """
-        if self.r5_network is not None:
-            return  self.r5_network  # al gebouwd
-
-        from r5py import TransportNetwork
-
-        self.osm_pbf_path = osm_pbf_path
-        self.gtfs_files = gtfs_files
-
-        self.r5_network = TransportNetwork(osm_pbf_path, gtfs_files)
-
-        return self.r5_network
-
-    def get_r5_network(self):
-        if self.r5_network is None:
-            raise ValueError("r5 network not initialized. Call build_r5_network() first.")
-        return self.r5_network
 
 class Database:
     def __init__(self, csv: str, geopackage: str) -> None:
@@ -147,7 +187,8 @@ class Database:
             - Creates in-memory duckdb
             - Stores connection to database to self.conn
             - Loads spatial extension to duckdb
-            - Creates all tables for database (see design)
+            - Creates the following tables (empty): CBS, Neighborhoods, Graph_nodes,
+                Graph_edges, Neighborhood_pts, Features
             - Uses csv and geopackage to fill CBS table
         """
         # Keeping track of neighborhoods that are dropped during point generation

@@ -7,6 +7,10 @@ from scipy.stats import qmc
 
 def PoissonDiskDistribution(lower_x, upper_x, lower_y, upper_y, radius=30,
                          ncanidates=7, optimization=None):
+    """
+        Given the bounding box, creates points using scipy's PoissonDisk distribution.
+        The radius, ncandidates and optimization are passed to the scipy function.
+    """
     engine = qmc.PoissonDisk(d=2, radius=radius,
                              ncandidates=ncanidates, optimization=optimization,
                              l_bounds=[lower_x, lower_y], u_bounds=[upper_x, upper_y])

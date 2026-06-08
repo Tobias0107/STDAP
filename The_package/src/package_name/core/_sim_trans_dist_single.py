@@ -1,15 +1,14 @@
 """
-    This file contains all functions related to the simulation of the transit
-    distance after removing <fraction> edges.
+    This file contains the run_simulation function containing the function logic used by the main class
+    to simulate pedestrianization on a single fraction.
 """
+
 # Imports
-import networkx as nx
-import geopandas as gpd
 from package_name.core._classes import Database, Network
 import package_name.utils.util_plotting as plot
 
 def run_simulation(network:Network, database:Database, f: float, use_population: bool,
-                   use_amenity: bool, simple_move: bool, blank_slate: bool,
+                   use_amenity: bool, simple_move: bool, bus_network_redesign: bool,
                    print_progress: bool, saving_dir: str, svg: bool):
     """
         ### Expects:
@@ -27,9 +26,9 @@ def run_simulation(network:Network, database:Database, f: float, use_population:
             - use_amenity (bool):\n
                 If true, factors in the amenity when pedestrianizing. If False, use_population should be True.
             - simple_move (bool):\n
-                If true, uses the minimal/iterative method to move transit stops. simple_move xor blank_slate should be true
-            - blank_slate (bool):\n
-                If true, uses the blank-slate method to move transit stops. simple_move xor blank_slate should be true
+                If true, uses the minimal/iterative method to move transit stops. simple_move xor bus_network_redesign should be true
+            - bus_network_redesign (bool):\n
+                If true, uses the blank-slate method to move transit stops. simple_move xor bus_network_redesign should be true
             - print_progress: \n
                 If True: Prints the progress of the simulation to stdout. As simulations can take
                 a long time this is highly recommended.
@@ -81,7 +80,7 @@ def run_simulation(network:Network, database:Database, f: float, use_population:
     database.remove_f_edges(f, use_population, use_amenity)
     if print_progress: print("Moving transit")
     if simple_move: database.move_transit_minimal()
-    elif blank_slate: database.move_transit_blank_slate()
+    elif bus_network_redesign: database.move_transit_blank_slate()
     if print_progress: print("Re-calculating distances to public transit")
     database.calculate_distances_to_nearest_transit()
 
