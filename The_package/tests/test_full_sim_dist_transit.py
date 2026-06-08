@@ -93,29 +93,28 @@ class TestMultipleFractions:
             for j, city in enumerate(large_cities, start=1):
                 if show_progress: print(f"\n({i * j} / {6 * len(large_cities)}) Simulating city: {city} using {ped_method} pedestrianization and {mv_method} transit movement.\n")
 
+                # Use cashed results if available
+                storage_folder = os.path.join("network_cache", city, ped_method, mv_method)
+                if not os.path.isdir(storage_folder):
+                    os.makedirs(storage_folder)
                 try:
                     # Choose city
                     if show_progress: print(f"Obtaining network from API or Cached files")
                     sim.choose_city(str(city))
-
                     # Simulate for all fractions
                     df = sim.Sim_trans_dist_multiple(f_start, f_stop, fn,
-                                                     use_population=pop,
-                                                     use_amenity=amenity,
-                                                     minimal_move=minimal,
-                                                     blank_slate=blank,
-                                                     print_progress=show_progress,
-                                                     saving_dir=os.path.join(folder, city, ped_method, mv_method, "fraction_range"),
-                                                     svg=svg_format)
+                                                    use_population=pop,
+                                                    use_amenity=amenity,
+                                                    minimal_move=minimal,
+                                                    blank_slate=blank,
+                                                    print_progress=show_progress,
+                                                    saving_dir=os.path.join(folder, city, ped_method, mv_method, "fraction_range"),
+                                                    svg=svg_format)
                     # Store in file to save RAM
-                    storage_folder = os.path.join("network_cache", city, ped_method, mv_method)
-                    if not os.path.isdir(storage_folder):
-                        os.makedirs(storage_folder)
                     df.to_parquet(os.path.join(storage_folder, city + ".parquet"))
                     del df
-
                     # Generate results for interesting fractions
-                    sim.Sim_trans_dist_single(min_1,
+                    df = sim.Sim_trans_dist_single(min_1,
                                             use_population=pop,
                                             use_amenity=amenity,
                                             minimal_move=minimal,
@@ -123,7 +122,9 @@ class TestMultipleFractions:
                                             print_progress=show_progress,
                                             saving_dir=os.path.join(folder, city, ped_method, mv_method, "individual_fractions", f"{min_1 * 100}%"),
                                             svg=svg_format)
-                    sim.Sim_trans_dist_single(min_2,
+                    df.to_parquet(os.path.join(storage_folder, city + "10%.parquet"))
+                    del df
+                    df = sim.Sim_trans_dist_single(min_2,
                                             use_population=pop,
                                             use_amenity=amenity,
                                             minimal_move=minimal,
@@ -131,14 +132,16 @@ class TestMultipleFractions:
                                             print_progress=show_progress,
                                             saving_dir=os.path.join(folder, city, ped_method, mv_method, "individual_fractions", f"{min_2 * 100}%"),
                                             svg=svg_format)
-                    sim.Sim_trans_dist_single(blank_1,
-                                            use_population=pop,
-                                            use_amenity=amenity,
-                                            minimal_move=minimal,
-                                            blank_slate=blank,
-                                            print_progress=show_progress,
-                                            saving_dir=os.path.join(folder, city, ped_method, mv_method, "individual_fractions", f"{blank_1 * 100}%"),
-                                            svg=svg_format)
+                    df.to_parquet(os.path.join(storage_folder, city + "25%.parquet"))
+                    del df
+                    # sim.Sim_trans_dist_single(blank_1,
+                    #                         use_population=pop,
+                    #                         use_amenity=amenity,
+                    #                         minimal_move=minimal,
+                    #                         blank_slate=blank,
+                    #                         print_progress=show_progress,
+                    #                         saving_dir=os.path.join(folder, city, ped_method, mv_method, "individual_fractions", f"{blank_1 * 100}%"),
+                    #                         svg=svg_format)
                     # Against memory problems
                     del sim
                     sim = simulator(csv, geopackage, store_in_file=cache_networks)
@@ -148,17 +151,18 @@ class TestMultipleFractions:
                     print(f"! Encountered error ({e}).\n If not during plotting: {city} likely misses key amenities / networks and is most likely not a city.\nSkipping to next city...\n")
                     plt.close("all")
                     gc.collect()
-
+                # else:
+                #     print("Using cashed results")
             # Store results to calculate avg for entire Netherlands
             multiple_lst: list[pd.DataFrame] = []
             for city in sim.get_cities():
                 try:
-                    df = pd.read_parquet(os.path.join("network_cache", city, ped_method, mv_method + ".parquet"))
+                    df = pd.read_parquet(os.path.join("network_cache", city, ped_method, mv_method, city + ".parquet"))
                     multiple_lst.append(df)
                 except Exception:
                     pass
 
-            # Plot Netherlands average
+            # Plot average
             plot.DataFrames(multiple_lst,
                     x_col='f',
                     y_col='avg_dist',
@@ -167,7 +171,19 @@ class TestMultipleFractions:
                     ylabel='Average distance',
                     title=f'Distance nearest transit: Average',
                     subtitle='',
-                    storage_folder=os.path.join(folder, city, ped_method, mv_method),
+                    storage_folder=os.path.join(folder, "Average", ped_method, mv_method),
                     name=f'Distance nearest transit: Average',
                     svg=svg_format,
                     multiple_figures=True)
+
+            for fraction in ["10%", "25%"]:
+                multiple_lst: list[pd.DataFrame] = []
+                for city in sim.get_cities():
+                    df = pd.read_parquet(os.path.join("network_cache", city, ped_method, mv_method, city + fraction + ".parquet"))
+                    multiple_lst.append(df)
+                plot.bar_demographic_average_distances(multiple_lst,
+                        title=f'Average distance per demographic group after pedestrianization: Average',
+                        subtitle='',
+                        storage_folder=os.path.join(folder, "Average", ped_method, mv_method, fraction),
+                        name=f'Average distance per demographic group after pedestrianization',
+                        svg=svg_format)

@@ -18,7 +18,7 @@ from package_name.config.settings import get_settings
 settings = get_settings()
 
 
-def bar_demographic_average_distance(df: pd.DataFrame, title='Average Distance per Group', subtitle='', storage_folder='.', name='dist_per_dem_grp', svg=True):
+def bar_demographic_average_distance(df, title='Average Distance per Group', subtitle='', storage_folder='.', name='dist_per_dem_grp', svg=True):
     """
     ### Description
         This function creates a bar diagraph of the demographic average distance dataframe
@@ -82,6 +82,17 @@ def bar_demographic_average_distance(df: pd.DataFrame, title='Average Distance p
     plt.close(fig)
 
 
+def bar_demographic_average_distances(dfs:list[pd.DataFrame], title='Average Distance per Group',
+                                      subtitle='', storage_folder='.', name='dist_per_dem_grp', svg=True):
+    combined = pd.concat(dfs, ignore_index=True)
+    avg_df = (
+        combined
+        .groupby(["dem_grp"], as_index=False)["avg_dist"]
+        .mean()
+    )
+    bar_demographic_average_distance(avg_df, title, subtitle, storage_folder, name, svg)
+
+
 def plot_points(xs: np.ndarray, ys: np.ndarray, title='', subtitle='', storage_folder='.', name='plotted_points', svg=False):
     """
     ### Parameters
@@ -105,7 +116,7 @@ def plot_points(xs: np.ndarray, ys: np.ndarray, title='', subtitle='', storage_f
     # Create figure
     fig = plt.figure()
     plt.scatter(xs, ys, s=0.5, edgecolors='none')
-    plt.axis('off')
+    # plt.axis('off')
 
     # Labels
     plt.suptitle(title)
@@ -123,7 +134,7 @@ def plot_points(xs: np.ndarray, ys: np.ndarray, title='', subtitle='', storage_f
     plt.close(fig)
 
 
-def bar_dist_per_neighborhood(df: gpd.GeoDataFrame, title='', subtitle='', storage_folder='.', name='dist_per_neighborhood', svg=True):
+def bar_dist_per_neighborhood(df, title='', subtitle='', storage_folder='.', name='dist_per_neighborhood', svg=True):
     """
     ### Description
         This function creates a bar diagraph of the distance per neighborhood
@@ -168,6 +179,18 @@ def bar_dist_per_neighborhood(df: gpd.GeoDataFrame, title='', subtitle='', stora
     else:
         fig.savefig(os.path.join(storage_folder, name + '.png'), format='png', dpi=settings.png_dpi)
     plt.close(fig)
+
+def bar_dist_per_neigborhoods(DataFrames: list[pd.DataFrame], title='', subtitle='',
+                              storage_folder='.', name='DataFrame', svg=True):
+    combined = pd.concat(DataFrames, ignore_index=True)
+    avg_df = (
+        combined
+        .groupby(["neighborhood"], as_index=False)["avg_dist"]
+        .mean()
+    )
+    bar_dist_per_neighborhood(avg_df, title, subtitle, storage_folder, name, svg)
+
+
 
 def colored_network(DataFrame: gpd.GeoDataFrame, graph, data_col_name, title='', subtitle='', colorbar_label='', storage_folder='.', name='colored_network', svg=True, force_linear=False, show_graph=True):
     """

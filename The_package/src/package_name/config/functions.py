@@ -5,7 +5,7 @@
 from scipy.stats import qmc
 
 
-def PoissonDiskDistribution(lower_x, upper_x, lower_y, upper_y, radius=100,
+def PoissonDiskDistribution(lower_x, upper_x, lower_y, upper_y, radius=30,
                          ncanidates=7, optimization=None):
     engine = qmc.PoissonDisk(d=2, radius=radius,
                              ncandidates=ncanidates, optimization=optimization,
