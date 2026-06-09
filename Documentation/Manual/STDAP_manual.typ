@@ -15,6 +15,7 @@
       _Simulate Transit Distance After Pedestrianization_
     ] else [
       #line(length: 100%)
+      _Manual_
       #h(1fr)
       #counter(page).display("1", both: false)
     ]
@@ -22,6 +23,30 @@
 )
 #show raw.where(block: true): block.with(fill: luma(90%), inset: 1em, radius: 0.5em, width: 100%)
 
+#set table(
+  stroke: (x: 0.5pt, y: 0.5pt),
+)
+
+#set table(
+  fill: (x, y) =>
+    if y == 0 {
+      rgb("#581d1d")
+      } else if calc.even(x + y) {
+      luma(95%)
+      } else {
+      luma(100%)
+      },
+  stroke: rgb("#581d1d")
+)
+
+#show table.cell: it => {
+  if it.y == 0 {
+    set text(rgb("ffffff"))
+    strong(it)
+  } else {
+    it
+  }
+}
 
 #outline()
 
@@ -126,9 +151,7 @@ settings.neighborhood_distribution = (
 
 === Configurable parameters
 Below is an overview of all configurable parameters. Such an overview containing current and default values is also obtainable using the settings.describe() and settings.to_df() functions of the settings class to obtain a string and Pandas DataFrame respectively.\
-#set table(
-  stroke: (x: 0.5pt, y: 0.5pt),
-)
+
 #table(
   columns: 4,
 
@@ -141,8 +164,11 @@ Below is an overview of all configurable parameters. Such an overview containing
 
   [dataset_column_names],
   [Dictionary],
-  [ #table(columns: 2,
-    table.header[*Data content*][*Dataset column name*],
+  [ #table(columns: 2, fill: white,
+    table.header(
+      text(fill: black)[*Data content*],
+      text(fill: black)[*Dataset column name*]
+    ),
     [id], [gwb_code],
     [region], [regio],
     [city name], [gm_naam],
