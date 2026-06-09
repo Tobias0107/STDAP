@@ -36,8 +36,7 @@ from PyQt6.QtWidgets import (
     QListView
 )
 
-from STDAP.core.main_class import simulator
-from STDAP.gui._widgets import CollapsibleBox
+from STDAP.core.main_class import Simulator
 
 
 class CollapsibleBox(QWidget):
@@ -988,7 +987,7 @@ class MainWindow(QMainWindow):
 
             self.statusBar().showMessage("Loading simulator...")
 
-            self.simulator = simulator(self.kwb_path, self.geopackage_path)
+            self.simulator = Simulator(self.kwb_path, self.geopackage_path)
 
             cities = self.simulator.get_cities()
 

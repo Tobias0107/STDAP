@@ -25,8 +25,9 @@ settings.dataset_column_names['low_education'] = "a_opl_hw"
 settings.dataset_nullstring = ['       .', '.', '']
 
 # Re-define radius used by PoissonDiskDistribution function
-settings.neighborhood_distribution = lambda a, b, c, d : PoissonDiskDistribution(a, b, c, d, radius=100)
-
+settings.neighborhood_distribution = (
+    lambda a, b, c, d : PoissonDiskDistribution(a, b, c, d, radius=100)
+)
 
 # Initiate simulator with datasets, specify graphs should be downloaded to speed up later simulations
 sim = Simulator(csv, geopackage, store_in_file=True, storage_dir="The_downloaded_graphs/")
