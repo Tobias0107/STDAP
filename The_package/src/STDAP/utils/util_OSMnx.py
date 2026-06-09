@@ -104,8 +104,14 @@ def get_graph(city:str, project=True, network_type="drive"):
     query = {'city': city, 'country': 'Netherlands'}
     place_gdf = ox.geocode_to_gdf(query)
     polygon = place_gdf.geometry.iloc[0]
+
+
+
+
+
+
+
     polygon = polygon.simplify(0.001)
-    gdf = ox.features_from_polygon(polygon, tags=tags)
     G = ox.graph_from_polygon(polygon, simplify=True, retain_all=True, network_type=network_type)
     if project:
         return ox.project_graph(G, to_crs="epsg:28992", to_latlong=False)
