@@ -1,6 +1,7 @@
 """
     This file contains the code used to research the effects of pedestrianization
     on transit stop distance (Thesis by Tobias van den Bosch).
+    The code is cleaned up to be more readable.
 """
 
 from STDAP.core.main_class import Simulator
@@ -15,8 +16,8 @@ import gc
 from itertools import product
 
 # Path to manually downloaded datasets
-csv = "tests/TestDatasets/kwb2024.csv" # https://www.cbs.nl/nl-nl/maatwerk/2025/40/kerncijfers-wijken-en-buurten-2024
-geopackage = "tests/TestDatasets/geopackage.gpkg" # https://www.cbs.nl/nl-nl/maatwerk/2025/40/kerncijfers-wijken-en-buurten-2024
+csv = "Datasets/kwb2024.csv" # https://www.cbs.nl/nl-nl/maatwerk/2025/40/kerncijfers-wijken-en-buurten-2024
+geopackage = "Datasets/geopackage.gpkg" # https://www.cbs.nl/nl-nl/maatwerk/2025/40/kerncijfers-wijken-en-buurten-2024
 
 # Set configuration to match 2024 dataset columns
 settings = get_settings()

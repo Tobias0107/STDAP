@@ -2,6 +2,9 @@
 # Global git ignore file. For ignore on subdirs, use gitignore in subdir ##
 ###########################################################################
 
+# Virtual environments
+*.venv*
+
 # Results
 *results*
 *Results*

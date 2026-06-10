@@ -851,7 +851,7 @@ class Database:
             tot_len = score["tot_len"]
             if tot_len <= 0:
                 continue
-            score = score["density"] * (score["ped_len"] / score["tot_len"] - fraction_min) / fraction_diff
+            score = score["density"] - (score["ped_len"] / score["tot_len"] - fraction_min) / fraction_diff
             heapq.heappush(heap, (-score, neighborhood_id))
 
         # Lists used to build edges_to_remove table
@@ -877,7 +877,7 @@ class Database:
             pedestrianized += length
             score["ped_len"] += length
             if score["tot_len"] > 0:
-                new_score = score["density"] * (score["ped_len"] / score["tot_len"]  - fraction_min) / fraction_diff
+                new_score = score["density"] - (score["ped_len"] / score["tot_len"]  - fraction_min) / fraction_diff
                 if neighborhood_edges[neighborhood_id]:
                     heapq.heappush(heap, (-new_score, neighborhood_id))
 
