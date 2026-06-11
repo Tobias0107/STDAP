@@ -90,47 +90,48 @@ for i, ((pop, amenity, ped_method),
                 storage_folder = os.path.join(cache_folder, city, ped_method, mv_method)
                 if not os.path.isdir(storage_folder):
                     os.makedirs(storage_folder)
+                    
 
-                #######################################################################
-                ################# Simulate for the single city ########################
-                #######################################################################
-                # Select the city so simulate
-                sim.choose_city(str(city))
+                    #######################################################################
+                    ################# Simulate for the single city ########################
+                    #######################################################################
+                    # Select the city so simulate
+                    sim.choose_city(str(city))
 
-                # Simulate the for all fractions pedestrianized
-                df = sim.Sim_trans_dist_multiple(f_start, f_stop, fn,
-                                                use_population=pop,
-                                                use_amenity=amenity,
-                                                minimal_move=minimal,
-                                                bus_network_redesign=redesign,
-                                                print_progress=show_progress,
-                                                # Store results in a nice to use file structure
-                                                saving_dir=os.path.join(folder, city, ped_method, mv_method, "fraction_range"),
-                                                svg=svg_format)
-                # Write results to file (RAM saver)
-                df.to_parquet(os.path.join(storage_folder, "range.parquet"))
-                del df
-                gc.collect()
+                    # Simulate the for all fractions pedestrianized
+                    df = sim.Sim_trans_dist_multiple(f_start, f_stop, fn,
+                                                    use_population=pop,
+                                                    use_amenity=amenity,
+                                                    minimal_move=minimal,
+                                                    bus_network_redesign=redesign,
+                                                    print_progress=show_progress,
+                                                    # Store results in a nice to use file structure
+                                                    saving_dir=os.path.join(folder, city, ped_method, mv_method, "fraction_range"),
+                                                    svg=svg_format)
+                    # Write results to file (RAM saver)
+                    df.to_parquet(os.path.join(storage_folder, "range.parquet"))
+                    del df
+                    gc.collect()
 
-                # Simulate for the individual fractions
-                sim.Sim_trans_dist_single(frac_1,
-                                        use_population=pop,
-                                        use_amenity=amenity,
-                                        minimal_move=minimal,
-                                        bus_network_redesign=redesign,
-                                        print_progress=show_progress,
-                                        # Store results in a nice to use file structure
-                                        saving_dir=os.path.join(folder, city, ped_method, mv_method, "individual_fractions", f"{frac_1 * 100}%"),
-                                        svg=svg_format)        
-                sim.Sim_trans_dist_single(frac_2,
-                                        use_population=pop,
-                                        use_amenity=amenity,
-                                        minimal_move=minimal,
-                                        bus_network_redesign=redesign,
-                                        print_progress=show_progress,
-                                        # Store results in a nice to use file structure
-                                        saving_dir=os.path.join(folder, city, ped_method, mv_method, "individual_fractions", f"{frac_1 * 100}%"),
-                                        svg=svg_format)
+                    # Simulate for the individual fractions
+                    sim.Sim_trans_dist_single(frac_1,
+                                            use_population=pop,
+                                            use_amenity=amenity,
+                                            minimal_move=minimal,
+                                            bus_network_redesign=redesign,
+                                            print_progress=show_progress,
+                                            # Store results in a nice to use file structure
+                                            saving_dir=os.path.join(folder, city, ped_method, mv_method, "individual_fractions", f"{frac_1 * 100}%"),
+                                            svg=svg_format)        
+                    sim.Sim_trans_dist_single(frac_2,
+                                            use_population=pop,
+                                            use_amenity=amenity,
+                                            minimal_move=minimal,
+                                            bus_network_redesign=redesign,
+                                            print_progress=show_progress,
+                                            # Store results in a nice to use file structure
+                                            saving_dir=os.path.join(folder, city, ped_method, mv_method, "individual_fractions", f"{frac_2 * 100}%"),
+                                            svg=svg_format)
                 # Just in case
                 plt.close("all")
             except Exception as e:
@@ -142,7 +143,7 @@ for i, ((pop, amenity, ped_method),
 
         # Re-obtain the stored results
         multiple_lst: list[pd.DataFrame] = []
-        for city in sim.get_cities():
+        for city in large_cities:
             try:
                 df = pd.read_parquet(os.path.join(cache_folder, str(city), ped_method, mv_method, "range.parquet"))
                 multiple_lst.append(df)

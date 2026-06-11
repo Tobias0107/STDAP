@@ -55,7 +55,7 @@ folder = "Results"
 show_progress = True
 svg_format = False
 cache_networks = True
-cache_folder = "network_cache"
+cache_folder = "network_cache/"
 f_start = 0
 f_stop = 0.5
 fn = 10
@@ -139,7 +139,7 @@ for i, ((pop, amenity, ped_method),
 
     # Re-obtain the stored results
     multiple_lst: list[pd.DataFrame] = []
-    for city in sim.get_cities():
+    for city in large_cities:
         df = pd.read_parquet(os.path.join(cache_folder, str(city), ped_method, mv_method, "range.parquet"))
         multiple_lst.append(df)
 
