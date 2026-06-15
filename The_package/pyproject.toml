@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "STDAP"
-version = "0.0.2"
+version = "1.0.1"
 authors = [
     { name = "Tobias van den Bosch", email = "Tobias.van.den.Bosch05@gmail.com" }
 ]
@@ -31,9 +31,9 @@ license = "MIT"
 license-files = ["LICEN[CS]E*"]
 
 [project.urls]
-Homepage = "https://github.com/Tobias0107/Percolation_street_transformation"
-Documentation = "https://github.com/Tobias0107/Percolation_street_transformation/docs"
-Issues = "https://github.com/Tobias0107/Percolation_street_transformation/issues"
+Homepage = "https://github.com/Tobias0107/STDAP"
+Documentation = "https://github.com/Tobias0107/STDAP/tree/main/Documentation"
+Issues = "https://github.com/Tobias0107/STDAP/issues"
 
 
 # Setuptools specific settings
