@@ -127,7 +127,7 @@ def get_features(city:str, project=True):
     ### Parameters:
     """
     # ox.settings.log_console = True
-    ox.settings.use_cache = True
+    ox.settings.use_cache = False
     query = {'city': city, 'country': 'Netherlands'}
     place_gdf = ox.geocode_to_gdf(query)
     polygon = place_gdf.geometry.iloc[0]
