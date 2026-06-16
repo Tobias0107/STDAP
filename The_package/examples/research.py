@@ -12,7 +12,6 @@ import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import gc
 from itertools import product
 
 # Path to manually downloaded datasets
@@ -108,8 +107,6 @@ for i, ((pop, amenity, ped_method),
                                          svg=svg_format)
         # Write results to file (RAM saver)
         df.to_parquet(os.path.join(storage_folder, "range.parquet"))
-        del df
-        gc.collect()
 
         # Simulate for the individual fractions
         sim.Sim_trans_dist_single(frac_1,
