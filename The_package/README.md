@@ -8,15 +8,8 @@ This package simulates the effects of pedestrianization upon the average distanc
 * Great visualization of results
 * Highly configurable
 
-#### Installing / Getting started
-
-The package can be installed using pip. Any dependencies are installed automatically:
-
-```shell
-pip install STDAP
-```
-
-The package can then be used to simulate pedestrianization in the following way:
+#### Getting started
+The package can be used to simulate pedestrianization in the following way:
 
 ```python
 from STDAP.core.main_class import Simulator
@@ -39,6 +32,8 @@ from STDAP.gui.dashboard import show_dashboard
 show_dashboard()
 ```
 
+A more detailed manual is available on the GitHub page (see Project links).
+
 ##### Configuration
 
 The package is designed to be highly configurable. This can be done easily with the settings class.
@@ -51,12 +46,3 @@ Configurable parameters and their default values can be obtained with the descri
 ```python
 print(settings.describe())
 ```
-
-#### Links
-- Project homepage: https://github.com/Tobias0107/STDAP
-- The package: https://github.com/Tobias0107/STDAP/tree/main/The_package
-- Documentation: https://github.com/Tobias0107/STDAP/tree/main/Documentation
-- Issue tracker: https://github.com/Tobias0107/STDAP/issues
-
-#### Licensing
-"The code in this project is licensed under MIT license."
