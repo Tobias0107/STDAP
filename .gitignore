@@ -3,7 +3,7 @@
 ###########################################################################
 
 # Pdf's take a lot of unnessicary space. Compile them from the .typ file.
-*.pdf
+# *.pdf
 
 # The execution binary for creating UML with plantuml
 *.jar

@@ -48,7 +48,7 @@
   }
 }
 
-#outline()
+#outline(title: [Document outline:])
 
 = Installation
 == The package
